@@ -1,0 +1,1 @@
+# census-rm-pubsub-adapter
