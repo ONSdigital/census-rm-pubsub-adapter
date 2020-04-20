@@ -12,6 +12,7 @@ import (
 func main() {
 
 	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
 
 	// Trap SIGINT to trigger a graceful shutdown.
 	signals := make(chan os.Signal, 1)
@@ -31,10 +32,13 @@ func main() {
 	log.Printf("Shutting Down")
 
 	//give the app 10 sec to cleanup before being killed
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	cctx, shutdownCancel := context.WithTimeout(ctx, 10*time.Second)
 
 	go func() {
-		defer cancel()
+		//send cancel to all consumers
+		cancel()
+		//defer shutdownCancel - this will be called once all things are close or when the timeout is reached
+		defer shutdownCancel()
 		log.Printf("Rabbit Cleanup")
 		a.RabbitChan.Close()
 		a.RabbitConn.Close()
@@ -42,7 +46,7 @@ func main() {
 	}()
 
 	//block until cancel has been called
-	<-ctx.Done()
+	<-cctx.Done()
 
 	log.Printf("Shutdown complete")
 	os.Exit(1)

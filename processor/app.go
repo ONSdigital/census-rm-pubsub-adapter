@@ -61,6 +61,9 @@ func (a *App) Process(ctx context.Context) {
 			}
 			sendRabbitMessage(rmMessageToSend, a.RabbitChan)
 			msg.Ack()
+		case <-ctx.Done():
+			//stop the loop from consuming messages
+			return
 		}
 	}
 
