@@ -21,7 +21,7 @@ func main() {
 
 	a.Setup(ctx, "amqp://guest:guest@localhost:6672/", "project")
 	go a.Consume(ctx)
-	go a.Produce(ctx)
+	go a.ProcessEqReceipt(ctx)
 
 	// block until we receive a shutdown signal
 	select {

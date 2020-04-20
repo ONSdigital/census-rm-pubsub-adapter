@@ -16,7 +16,7 @@ type App struct {
 	RabbitChan   *amqp.Channel
 	PubSubClient *pubsub.Client
 	EqReceiptSub *pubsub.Subscription
-	ReceiptChan  chan models.EqReceipt
+	MessageChan  chan pubsub.Message
 }
 
 func (a *App) Setup(ctx context.Context, rabbitConnectionString, projectID string) {
@@ -35,19 +35,30 @@ func (a *App) Setup(ctx context.Context, rabbitConnectionString, projectID strin
 
 	//setup subcriptions
 	a.EqReceiptSub = a.PubSubClient.Subscription("rm-receipt-subscription")
-	a.ReceiptChan = make(chan models.EqReceipt)
+	a.MessageChan = make(chan pubsub.Message)
 
 }
 
-func (a *App) Produce(ctx context.Context) {
+func (a *App) ProcessEqReceipt(ctx context.Context) {
 	for {
 		select {
-		case eqReceiptReceived := <-a.ReceiptChan:
+		case msg := <-a.MessageChan:
+			var eqReceiptReceived models.EqReceipt
+			err := json.Unmarshal(msg.Data, &eqReceiptReceived)
+			if err != nil {
+				// TODO Log the error and DLQ the message when unmarshalling fails, printing it out is a temporary solution
+				log.Printf("Error unmarshalling message: %q, error: %q\n", string(msg.Data), err)
+				msg.Ack()
+				return
+			}
+
+			log.Printf("Got QID: %q\n", eqReceiptReceived.Metadata.QuestionnaireID)
 			rmMessageToSend, err := convertEqReceiptToRmMessage(&eqReceiptReceived)
 			if err != nil {
 				log.Println(errors.Wrap(err, "failed to convert receipt to message"))
 			}
 			sendRabbitMessage(rmMessageToSend, a.RabbitChan)
+			msg.Ack()
 		}
 	}
 
@@ -58,21 +69,7 @@ func (a *App) Consume(ctx context.Context) {
 
 	err := a.EqReceiptSub.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
 		log.Printf("Got message: %q\n", string(msg.Data))
-
-		eqReceiptReceived := models.EqReceipt{}
-		err := json.Unmarshal(msg.Data, &eqReceiptReceived)
-		if err != nil {
-			// TODO Log the error and DLQ the message when unmarshalling fails, printing it out is a temporary solution
-			log.Printf("Error unmarshalling message: %q, error: %q\n", string(msg.Data), err)
-			msg.Ack()
-			return
-		}
-
-		log.Printf("Got QID: %q\n", eqReceiptReceived.Metadata.QuestionnaireID)
-
-		a.ReceiptChan <- eqReceiptReceived
-		msg.Ack()
-
+		a.MessageChan <- *msg
 	})
 	if err != nil {
 		log.Printf("Receive: %v\n", err)

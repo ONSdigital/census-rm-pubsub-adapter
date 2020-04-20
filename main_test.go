@@ -52,7 +52,7 @@ func TestEqReceipt(t *testing.T) {
 	}
 
 	go a.Consume(ctx)
-	go a.Produce(ctx)
+	go a.ProcessEqReceipt(ctx)
 
 	msgs, err := rabbitChan.Consume("goTestQueue", "", false, false, false, false, nil)
 	if err != nil {
