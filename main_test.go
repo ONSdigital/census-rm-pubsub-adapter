@@ -2,7 +2,7 @@ package main
 
 import (
 	"cloud.google.com/go/pubsub"
-	"github.com/ONSdigital/census-rm-pubsub-adapter/processor/eqreceipt"
+	"github.com/ONSdigital/census-rm-pubsub-adapter/processor"
 	"github.com/streadway/amqp"
 	"golang.org/x/net/context"
 	"os"
@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-var a eqreceipt.App
+var a processor.App
 
 func TestMain(m *testing.M) {
 	ctx := context.Background()

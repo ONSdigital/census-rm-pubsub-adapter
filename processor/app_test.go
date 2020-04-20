@@ -1,27 +1,26 @@
-package eqreceipt
+package processor
 
 import (
-	"github.com/ONSdigital/census-rm-pubsub-adapter/models/incoming-pubsub"
-	"github.com/ONSdigital/census-rm-pubsub-adapter/models/rabbit"
+	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 	"reflect"
 	"testing"
 )
 
 func TestConvertEqReceiptToRmMessage(t *testing.T) {
-	eqReceiptMessage := incoming_pubsub.EqReceipt{"2008-08-24T00:00:00Z",
-		incoming_pubsub.EqReceiptMetadata{
+	eqReceiptMessage := models.EqReceipt{"2008-08-24T00:00:00Z",
+		models.EqReceiptMetadata{
 			TransactionID: "abc123xxx", QuestionnaireID: "01213213213"}}
 
-	expectedRabbitMessage := rabbit.RmMessage{
-		Event: rabbit.RmEvent{
+	expectedRabbitMessage := models.RmMessage{
+		Event: models.RmEvent{
 			Type:          "RESPONSE_RECEIVED",
 			Source:        "RECEIPT_SERVICE",
 			Channel:       "EQ",
 			DateTime:      "2008-08-24T00:00:00Z",
 			TransactionID: "abc123xxx",
 		},
-		Payload: rabbit.RmPayload{
-			Response: rabbit.RmResponse{
+		Payload: models.RmPayload{
+			Response: models.RmResponse{
 				QuestionnaireID: "01213213213",
 			},
 		}}

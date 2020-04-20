@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"github.com/ONSdigital/census-rm-pubsub-adapter/processor/eqreceipt"
+	"github.com/ONSdigital/census-rm-pubsub-adapter/processor"
 	"log"
 	"os"
 	"os/signal"
@@ -17,7 +17,7 @@ func main() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
 
-	a := eqreceipt.App{}
+	a := processor.App{}
 
 	a.Setup(ctx, "amqp://guest:guest@localhost:6672/", "project")
 	go a.Consume(ctx)

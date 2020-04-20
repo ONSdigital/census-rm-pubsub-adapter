@@ -1,4 +1,4 @@
-package rabbit
+package models
 
 type RmResponse struct {
 	CaseID          *string `json:"caseId"` // Why a reference type?

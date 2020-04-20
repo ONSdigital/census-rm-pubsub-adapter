@@ -1,4 +1,4 @@
-package incoming_pubsub
+package models
 
 type EqReceiptMetadata struct {
 	TransactionID   string `json:"tx_id"`

@@ -1,10 +1,9 @@
-package eqreceipt
+package processor
 
 import (
 	"context"
 	"encoding/json"
-	"github.com/ONSdigital/census-rm-pubsub-adapter/models/incoming-pubsub"
-	"github.com/ONSdigital/census-rm-pubsub-adapter/models/rabbit"
+	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 	"log"
 
 	"cloud.google.com/go/pubsub"
@@ -16,8 +15,8 @@ type App struct {
 	RabbitConn   *amqp.Connection
 	RabbitChan   *amqp.Channel
 	PubSubClient *pubsub.Client
-	EqRecieptSub *pubsub.Subscription
-	ReceiptChan  chan incoming_pubsub.EqReceipt
+	EqReceiptSub *pubsub.Subscription
+	ReceiptChan  chan models.EqReceipt
 }
 
 func (a *App) Setup(ctx context.Context, rabbitConnectionString, projectID string) {
@@ -33,9 +32,10 @@ func (a *App) Setup(ctx context.Context, rabbitConnectionString, projectID strin
 	//setup pubsub connection
 	a.PubSubClient, err = pubsub.NewClient(ctx, projectID)
 	failOnError(err, "Pubsub client creation failed")
+
 	//setup subcriptions
-	a.EqRecieptSub = a.PubSubClient.Subscription("rm-receipt-subscription")
-	a.ReceiptChan = make(chan incoming_pubsub.EqReceipt)
+	a.EqReceiptSub = a.PubSubClient.Subscription("rm-receipt-subscription")
+	a.ReceiptChan = make(chan models.EqReceipt)
 
 }
 
@@ -56,15 +56,17 @@ func (a *App) Produce(ctx context.Context) {
 func (a *App) Consume(ctx context.Context) {
 	log.Println("Launched PubSub message listener")
 
-	// Not using the cancel function here (which makes WithCancel a bit redundant!)
-	// Ideally the cancel would be deferred/delegated to a signal watcher to
-	// enable graceful shutdown that can kill the active go routines.
-	cctx, _ := context.WithCancel(ctx)
-	err := a.EqRecieptSub.Receive(cctx, func(ctx context.Context, msg *pubsub.Message) {
+	err := a.EqReceiptSub.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
 		log.Printf("Got message: %q\n", string(msg.Data))
 
-		eqReceiptReceived := incoming_pubsub.EqReceipt{}
-		json.Unmarshal(msg.Data, &eqReceiptReceived)
+		eqReceiptReceived := models.EqReceipt{}
+		err := json.Unmarshal(msg.Data, &eqReceiptReceived)
+		if err != nil {
+			// TODO Log the error and DLQ the message when unmarshalling fails, printing it out is a temporary solution
+			log.Printf("Error unmarshalling message: [%q], error: [%q]", msg.Data, err)
+			msg.Ack()
+			return
+		}
 
 		log.Printf("Got QID: %q\n", eqReceiptReceived.Metadata.QuestionnaireID)
 
@@ -77,7 +79,7 @@ func (a *App) Consume(ctx context.Context) {
 	}
 }
 
-func sendRabbitMessage(message *rabbit.RmMessage, ch *amqp.Channel) {
+func sendRabbitMessage(message *models.RmMessage, ch *amqp.Channel) {
 
 	byteMessage, err := json.Marshal(message)
 	failOnError(err, "Failed to marshall data")
@@ -102,21 +104,21 @@ func failOnError(err error, msg string) {
 	}
 }
 
-func convertEqReceiptToRmMessage(eqReceipt *incoming_pubsub.EqReceipt) (*rabbit.RmMessage, error) {
+func convertEqReceiptToRmMessage(eqReceipt *models.EqReceipt) (*models.RmMessage, error) {
 	if eqReceipt == nil {
 		return nil, errors.New("receipt has nil content")
 	}
 
-	return &rabbit.RmMessage{
-		Event: rabbit.RmEvent{
+	return &models.RmMessage{
+		Event: models.RmEvent{
 			Type:          "RESPONSE_RECEIVED",
 			Source:        "RECEIPT_SERVICE",
 			Channel:       "EQ",
 			DateTime:      eqReceipt.TimeCreated,
 			TransactionID: eqReceipt.Metadata.TransactionID,
 		},
-		Payload: rabbit.RmPayload{
-			Response: rabbit.RmResponse{
+		Payload: models.RmPayload{
+			Response: models.RmResponse{
 				QuestionnaireID: eqReceipt.Metadata.QuestionnaireID,
 			},
 		},
