@@ -63,7 +63,7 @@ func (a *App) Consume(ctx context.Context) {
 		err := json.Unmarshal(msg.Data, &eqReceiptReceived)
 		if err != nil {
 			// TODO Log the error and DLQ the message when unmarshalling fails, printing it out is a temporary solution
-			log.Printf("Error unmarshalling message: [%q], error: [%q]", msg.Data, err)
+			log.Printf("Error unmarshalling message: %q, error: %q\n", string(msg.Data), err)
 			msg.Ack()
 			return
 		}
