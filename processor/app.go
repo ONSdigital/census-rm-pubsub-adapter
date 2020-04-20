@@ -39,7 +39,7 @@ func (a *App) Setup(ctx context.Context, rabbitConnectionString, projectID strin
 
 }
 
-func (a *App) ProcessEqReceipt(ctx context.Context) {
+func (a *App) Process(ctx context.Context) {
 	for {
 		select {
 		case msg := <-a.MessageChan:
