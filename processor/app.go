@@ -19,10 +19,11 @@ type App struct {
 	MessageChan  chan pubsub.Message
 }
 
-func (a *App) Setup(ctx context.Context, rabbitConnectionString, projectID string) {
+func New(ctx context.Context, rabbitConnectionString, projectID string) *App {
 
 	//set up rabbit connection
 	var err error
+	a := &App{}
 	a.RabbitConn, err = amqp.Dial(rabbitConnectionString)
 	failOnError(err, "Failed to connect to RabbitMQ")
 
@@ -37,6 +38,7 @@ func (a *App) Setup(ctx context.Context, rabbitConnectionString, projectID strin
 	a.EqReceiptSub = a.PubSubClient.Subscription("rm-receipt-subscription")
 	a.MessageChan = make(chan pubsub.Message)
 
+	return a
 }
 
 func (a *App) Process(ctx context.Context) {

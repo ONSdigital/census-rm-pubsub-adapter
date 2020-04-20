@@ -17,9 +17,7 @@ func main() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
 
-	a := processor.App{}
-
-	a.Setup(ctx, "amqp://guest:guest@localhost:6672/", "project")
+	a := processor.New(ctx, "amqp://guest:guest@localhost:6672/", "project")
 	go a.Consume(ctx)
 	go a.Process(ctx)
 

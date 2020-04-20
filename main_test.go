@@ -10,11 +10,11 @@ import (
 	"time"
 )
 
-var a processor.App
+var a *processor.App
 
 func TestMain(m *testing.M) {
 	ctx := context.Background()
-	a.Setup(ctx, "amqp://guest:guest@localhost:6672/", "project")
+	a = processor.New(ctx, "amqp://guest:guest@localhost:6672/", "project")
 	code := m.Run()
 	os.Exit(code)
 }
