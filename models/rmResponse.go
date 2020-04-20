@@ -1,9 +1,9 @@
 package models
 
 type RmResponse struct {
-	CaseID          *string `json:"caseId"` // Why a reference type?
-	QuestionnaireID string  `json:"questionnaireId"`
-	Unreceipt       bool    `json:"unreceipt"`
+	CaseID          string `json:"caseId,omitempty"`
+	QuestionnaireID string `json:"questionnaireId"`
+	Unreceipt       bool   `json:"unreceipt"`
 }
 
 type RmPayload struct {

@@ -22,7 +22,7 @@ func TestMain(m *testing.M) {
 func TestEqReceipt(t *testing.T) {
 
 	eqRecieptMsg := `{"timeCreated": "2008-08-24T00:00:00Z", "metadata": {"tx_id": "abc123xxx", "questionnaire_id": "01213213213"}}`
-	expectedRabbitMessage := `{"event":{"type":"RESPONSE_RECEIVED","source":"RECEIPT_SERVICE","channel":"EQ","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"response":{"caseId":null,"questionnaireId":"01213213213","unreceipt":false}}}`
+	expectedRabbitMessage := `{"event":{"type":"RESPONSE_RECEIVED","source":"RECEIPT_SERVICE","channel":"EQ","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"response":{"questionnaireId":"01213213213","unreceipt":false}}}`
 
 	rabbitConn, err := amqp.Dial("amqp://guest:guest@localhost:6672/")
 	if err != nil {
