@@ -32,7 +32,7 @@ func main() {
 	log.Printf("Shutting Down")
 
 	//give the app 10 sec to cleanup before being killed
-	cctx, shutdownCancel := context.WithTimeout(ctx, 10*time.Second)
+	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 10*time.Second)
 
 	go func() {
 		//send cancel to all consumers
@@ -46,7 +46,7 @@ func main() {
 	}()
 
 	//block until cancel has been called
-	<-cctx.Done()
+	<-shutdownCtx.Done()
 
 	log.Printf("Shutdown complete")
 	os.Exit(1)
