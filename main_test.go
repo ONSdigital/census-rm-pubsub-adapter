@@ -63,6 +63,9 @@ func TestEqReceipt(t *testing.T) {
 	select {
 	case d := <-msgs:
 		rabbitMessages = append(rabbitMessages, string(d.Body))
+	case <-ctx.Done():
+		t.Errorf("Timed out waiting for the rabbit message")
+		return
 	}
 
 	if string(rabbitMessages[0]) != expectedRabbitMessage {
