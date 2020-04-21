@@ -23,19 +23,17 @@ func publishMessage(projectID, topicID, msg string) error {
 	}
 
 	t := client.Topic(topicID)
-	for i := 0; i < 10000; i++ {
 
-		result := t.Publish(ctx, &pubsub.Message{
-			Data: []byte(msg),
-		})
-		// Block until the result is returned and a server-generated
-		// ID is returned for the published message.
-		id, err := result.Get(ctx)
-		if err != nil {
-			fmt.Printf("get: %v\n", err)
-			return fmt.Errorf("get: %v", err)
-		}
-		fmt.Printf("Published a message; msg ID: %v\n", id)
+	result := t.Publish(ctx, &pubsub.Message{
+		Data: []byte(msg),
+	})
+	// Block until the result is returned and a server-generated
+	// ID is returned for the published message.
+	id, err := result.Get(ctx)
+	if err != nil {
+		fmt.Printf("get: %v\n", err)
+		return fmt.Errorf("get: %v", err)
 	}
+	fmt.Printf("Published a message; msg ID: %v\n", id)
 	return nil
 }
