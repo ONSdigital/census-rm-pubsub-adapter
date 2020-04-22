@@ -18,7 +18,11 @@ func main() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
 
-	a := processor.New(ctx, "amqp://guest:guest@localhost:6672/", "project")
+	rabbitConnection := "amqp://guest:guest@localhost:7672/"
+	if rabbitConnectionFromEnv := os.Getenv("RABBIT_CONNECTION"); rabbitConnection != "" {
+		rabbitConnection = rabbitConnectionFromEnv
+	}
+	a := processor.New(ctx, rabbitConnection, "project")
 	go a.Consume(ctx)
 	go a.Process(ctx)
 

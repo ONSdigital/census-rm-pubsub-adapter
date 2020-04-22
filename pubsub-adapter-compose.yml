@@ -1,0 +1,9 @@
+version: "3.4"
+services:
+  pubsub-adapter:
+    container_name: pubsub-adapter-dev
+    image: eu.gcr.io/census-rm-ci/census-rm-pubsub-adapter
+    environment:
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator-pubsub-adapter-dev:8539
+      - RABBIT_CONNECTION=amqp://guest:guest@rabbitmq-pubsub-adapter-dev:5672/
+    restart: on-failure

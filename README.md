@@ -9,15 +9,34 @@ Requires golang >= 1.13 installed
 ## Running the tests
 Run 
 ```shell
-make test
+make build-test
 ```
-This will run the units tests then spin up the dependencies with docker-compose and run the service integration tests.
+This will run the formatter, build and units tests then spin up the dependencies with docker-compose and run the service integration tests.
 
 ## Debugging the tests
 To run the integration tests in an IDE
- 1. Run `make up` to start up the dependencies with docker-compose.
+ 1. Run `make up-dependencies` to start up the dependencies with docker-compose.
  1. Set the environment variable `PUBSUB_EMULATOR_HOST=localhost:8539` in your IDE run configuration
  1. Run the test in debug mode
 
 ## Formatting
 Run `make format` to automatically format the project using `gofmt`
+
+## Build the docker image
+With 
+```shell
+make docker
+```    
+
+## Run in docker-compose
+### Start the service and dependencies
+Run `make up` to start the pubsub-adapter and dependencies through docker-compose
+
+You can then run `make logs` to tail the logs
+
+### Post in a test message
+You can send a test message onto the pubsub emulator with the tools script
+```shell
+PUBSUB_EMULATOR_HOST=localhost:8539 go run tools/publish_message.go
+```
+You should see the pubsub adapter log that it has processed the message and see the rabbit messages it produced in the rabbit management UI at http://localhost:17672 (login: guest, guest).

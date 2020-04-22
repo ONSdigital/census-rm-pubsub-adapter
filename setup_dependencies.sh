@@ -34,6 +34,6 @@ curl -X PUT http://localhost:8539/v1/projects/offline-project/subscriptions/rm-o
 curl -X PUT http://localhost:8539/v1/projects/ppo-undelivered-project/subscriptions/rm-ppo-undelivered-subscription -H 'Content-Type: application/json' -d '{"topic": "projects/ppo-undelivered-project/topics/ppo-undelivered-mail-topic"}'
 curl -X PUT http://localhost:8539/v1/projects/qm-undelivered-project/subscriptions/rm-qm-undelivered-subscription -H 'Content-Type: application/json' -d '{"topic": "projects/qm-undelivered-project/topics/qm-undelivered-mail-topic"}'
 
-wait_for_curl_success "http://guest:guest@localhost:16672/api/aliveness-test/%2F" "GET" "rabbitmq"
+wait_for_curl_success "http://guest:guest@localhost:17672/api/aliveness-test/%2F" "GET" "rabbitmq"
 
 echo "Containers running and alive"
