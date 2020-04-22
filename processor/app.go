@@ -27,12 +27,12 @@ func New(ctx context.Context, rabbitConnectionString, projectID string) *App {
 	a.RabbitConn, err = amqp.Dial(rabbitConnectionString)
 	failOnError(err, "Failed to connect to RabbitMQ")
 
-	a.RabbitChan, err = a.RabbitConn.Channel()
+	   a.RabbitChan, err = a.RabbitConn.Channel()
 	failOnError(err, "Failed to open a channel")
 
 	//setup pubsub connection
 	a.PubSubClient, err = pubsub.NewClient(ctx, projectID)
-	failOnError(err, "Pubsub client creation failed")
+	   failOnError(err, "Pubsub client creation failed")
 
 	//setup subcriptions
 	a.EqReceiptSub = a.PubSubClient.Subscription("rm-receipt-subscription")
