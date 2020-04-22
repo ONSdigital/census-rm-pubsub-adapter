@@ -8,7 +8,7 @@ Requires golang >= 1.13 installed
 
 ## Running the tests
 Run 
-```shell
+```sh
 make build-test
 ```
 This will run the formatter, build and units tests then spin up the dependencies with docker-compose and run the service integration tests.
@@ -24,7 +24,7 @@ Run `make format` to automatically format the project using `gofmt`
 
 ## Build the docker image
 With 
-```shell
+```sh
 make docker
 ```    
 
@@ -36,7 +36,7 @@ You can then run `make logs` to tail the logs
 
 ### Post in a test message
 You can send a test message onto the pubsub emulator with the tools script
-```shell
+```sh
 PUBSUB_EMULATOR_HOST=localhost:8539 go run tools/publish_message.go
 ```
 You should see the pubsub adapter log that it has processed the message and see the rabbit messages it produced in the rabbit management UI at http://localhost:17672 (login: guest, guest).
