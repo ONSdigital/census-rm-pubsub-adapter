@@ -19,7 +19,7 @@ func main() {
 	signal.Notify(signals, os.Interrupt)
 
 	rabbitConnection := "amqp://guest:guest@localhost:7672/"
-	if rabbitConnectionFromEnv := os.Getenv("RABBIT_CONNECTION"); rabbitConnection != "" {
+	if rabbitConnectionFromEnv := os.Getenv("RABBIT_CONNECTION"); rabbitConnectionFromEnv != "" {
 		rabbitConnection = rabbitConnectionFromEnv
 	}
 	a := processor.New(ctx, rabbitConnection, "project")
