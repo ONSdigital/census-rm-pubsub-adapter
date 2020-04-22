@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo 'Running setup_pubsub.sh'
+echo 'Running setup_dependencies.sh'
 
 wait_for_curl_success() {
     local healthcheck_url=${1}
