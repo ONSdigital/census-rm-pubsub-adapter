@@ -6,13 +6,16 @@ down:
 	docker-compose -f dev.yml down
 
 docker:
-	docker build -t eu.gcr.io/census-rm-ci/census-rm-pubsub-adapter .
+	docker build -race -t eu.gcr.io/census-rm-ci/census-rm-pubsub-adapter .
 
 build:
 	go build .
 
 format:
-	gofmt -w .
+	go fmt ./...
+
+format-check:
+	./format_check.sh
 
 logs:
 	docker-compose -f dev.yml logs --follow
