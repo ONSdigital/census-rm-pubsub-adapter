@@ -13,7 +13,7 @@ func TestGetErrorsWithoutValues(t *testing.T) {
 		t.Fail()
 		return
 	}
-	if !strings.Contains(err.Error(), "required key") || !strings.Contains(err.Error(), "missing value"){
+	if !strings.Contains(err.Error(), "required key") || !strings.Contains(err.Error(), "missing value") {
 		t.Log(err)
 		t.Fail()
 	}
