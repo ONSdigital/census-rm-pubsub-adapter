@@ -7,13 +7,13 @@ import (
 
 // Configuration structure which hold information for configuring the import API
 type Configuration struct {
-	RabbitHost            string `envconfig:"RABBIT_HOST"`
-	RabbitPort            string `envconfig:"RABBIT_PORT"`
-	RabbitUsername        string `envconfig:"RABBIT_USERNAME"`
-	RabbitPassword        string `envconfig:"RABBIT_PASSOWRD"  json:"-"`
+	RabbitHost            string `envconfig:"RABBIT_HOST" required:"true"`
+	RabbitPort            string `envconfig:"RABBIT_PORT" required:"true"`
+	RabbitUsername        string `envconfig:"RABBIT_USERNAME" required:"true"`
+	RabbitPassword        string `envconfig:"RABBIT_PASSOWRD"  required:"true"json:"-"`
 	RabbitVHost           string `envconfig:"RABBIT_VHOST"`
-	EqReceiptProject      string `envconfig:"EQ_RECEIPT_PROJECT"`
-	EqReceiptSubscription string `envconfig:"EQ_RECEIPT_SUBSCRIPTION"`
+	EqReceiptProject      string `envconfig:"EQ_RECEIPT_PROJECT" required:"true"`
+	EqReceiptSubscription string `envconfig:"EQ_RECEIPT_SUBSCRIPTION" required:"true"`
 }
 
 var cfg *Configuration
@@ -23,15 +23,8 @@ func Get() (*Configuration, error) {
 	if cfg != nil {
 		return cfg, nil
 	}
-
 	cfg = &Configuration{
-		RabbitHost:            "localhost",
-		RabbitPort:            "6672",
-		RabbitUsername:        "guest",
-		RabbitPassword:        "guest",
-		RabbitVHost:           "/",
-		EqReceiptProject:      "project",
-		EqReceiptSubscription: "rm-receipt-subscription",
+		RabbitVHost: "/",
 	}
 
 	err := envconfig.Process("", cfg)

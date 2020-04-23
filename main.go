@@ -27,7 +27,8 @@ func main() {
 		appConfig.RabbitUsername +
 		":" + appConfig.RabbitPassword +
 		"@" + appConfig.RabbitHost +
-		":" + appConfig.RabbitPort + appConfig.RabbitVHost
+		":" + appConfig.RabbitPort +
+		appConfig.RabbitVHost
 	eqReceiptProcessor := processor.New(ctx, rabbitConnection, appConfig.EqReceiptProject, appConfig.EqReceiptSubscription)
 	go eqReceiptProcessor.Consume(ctx)
 	go eqReceiptProcessor.Process(ctx)

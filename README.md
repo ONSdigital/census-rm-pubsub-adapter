@@ -6,6 +6,20 @@ An adapter service to translate inbound PubSub messages into the standard format
 ## Prerequisites 
 Requires golang >= 1.13 installed
 
+## Configuration
+
+The required environment configuration variables are:
+```sh
+RABBIT_HOST
+RABBIT_PORT
+RABBIT_USERNAME
+RABBIT_PASSWORD
+EQ_RECEIPT_PROJECT
+EQ_RECEIPT_SUBSCRIPTION
+```
+
+Development config to run locally using the docker compose dependencies is provided in [development.env](./development.env)
+
 ## Running the tests
 Run 
 ```sh

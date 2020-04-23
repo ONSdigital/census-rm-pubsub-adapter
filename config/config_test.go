@@ -1,25 +1,20 @@
 package config
 
 import (
-	"reflect"
+	"strings"
 	"testing"
 )
 
-func TestGetReturnsDefaultValues(t *testing.T) {
-	testConfig, err := Get()
-	if err != nil {
-		t.Error(err)
+func TestGetErrorsWithoutValues(t *testing.T) {
+	cfg = nil
+	_, err := Get()
+	if err == nil {
+		t.Log("Config get did not return an error in prod mode when not provided any values")
+		t.Fail()
+		return
 	}
-	if !reflect.DeepEqual(testConfig, &Configuration{
-		RabbitHost:            "localhost",
-		RabbitPort:            "6672",
-		RabbitUsername:        "guest",
-		RabbitPassword:        "guest",
-		RabbitVHost:           "/",
-		EqReceiptProject:      "project",
-		EqReceiptSubscription: "rm-receipt-subscription",
-	}) {
-		t.Logf("Default config did not match the expected values, found config: %q", testConfig)
+	if !strings.Contains(err.Error(), "required key") || !strings.Contains(err.Error(), "missing value"){
+		t.Log(err)
 		t.Fail()
 	}
 }
