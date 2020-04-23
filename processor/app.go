@@ -19,7 +19,7 @@ type App struct {
 	MessageChan  chan pubsub.Message
 }
 
-func New(ctx context.Context, rabbitConnectionString, projectID string) *App {
+func New(ctx context.Context, rabbitConnectionString, projectId string, subscriptionId string) *App {
 
 	//set up rabbit connection
 	var err error
@@ -31,11 +31,11 @@ func New(ctx context.Context, rabbitConnectionString, projectID string) *App {
 	failOnError(err, "Failed to open a channel")
 
 	//setup pubsub connection
-	a.PubSubClient, err = pubsub.NewClient(ctx, projectID)
+	a.PubSubClient, err = pubsub.NewClient(ctx, projectId)
 	failOnError(err, "Pubsub client creation failed")
 
-	//setup subcriptions
-	a.EqReceiptSub = a.PubSubClient.Subscription("rm-receipt-subscription")
+	//setup subscription
+	a.EqReceiptSub = a.PubSubClient.Subscription(subscriptionId)
 	a.MessageChan = make(chan pubsub.Message)
 
 	return a

@@ -1,3 +1,6 @@
+// +build !unitTest
+// This test requires dependencies to be running
+
 package main
 
 import (
@@ -10,11 +13,11 @@ import (
 	"time"
 )
 
-var a *processor.App
+var eqReceiptProcessor *processor.App
 
 func TestMain(m *testing.M) {
 	ctx := context.Background()
-	a = processor.New(ctx, "amqp://guest:guest@localhost:7672/", "project")
+	eqReceiptProcessor = processor.New(ctx, "amqp://guest:guest@localhost:7672/", "project", "rm-receipt-subscription")
 	code := m.Run()
 	os.Exit(code)
 }
@@ -44,15 +47,15 @@ func TestEqReceipt(t *testing.T) {
 	result := eqReceiptTopic.Publish(ctx, &pubsub.Message{
 		Data: []byte(eqRecieptMsg),
 	})
-	// Block until the result is returned and a server-generated
+	// Block until the result is returned and eqReceiptProcessor server-generated
 	// ID is returned for the published message.
 	id, err := result.Get(ctx)
 	if err != nil {
 		t.Errorf("Pubsub test message %s publish failed. %s", id, err)
 	}
 
-	go a.Consume(ctx)
-	go a.Process(ctx)
+	go eqReceiptProcessor.Consume(ctx)
+	go eqReceiptProcessor.Process(ctx)
 
 	msgs, err := rabbitChan.Consume("goTestQueue", "", false, false, false, false, nil)
 	if err != nil {

@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/processor"
+	"github.com/pkg/errors"
 	"log"
 	"os"
 	"os/signal"
@@ -10,29 +12,33 @@ import (
 )
 
 func main() {
-
+	appConfig, err := config.Get()
+	if err != nil {
+		log.Fatal(errors.Wrap(err, "Error getting config at startup"))
+	}
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 
-	// Trap SIGINT to trigger a graceful shutdown.
+	// Trap SIGINT to trigger eqReceiptProcessor graceful shutdown.
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
 
-	rabbitConnection := "amqp://guest:guest@localhost:7672/"
-	if rabbitConnectionFromEnv := os.Getenv("RABBIT_CONNECTION"); rabbitConnectionFromEnv != "" {
-		rabbitConnection = rabbitConnectionFromEnv
-	}
-	a := processor.New(ctx, rabbitConnection, "project")
-	go a.Consume(ctx)
-	go a.Process(ctx)
+	rabbitConnection := "amqp://" +
+		appConfig.RabbitUsername +
+		":" + appConfig.RabbitPassword +
+		"@" + appConfig.RabbitHost +
+		":" + appConfig.RabbitPort + appConfig.RabbitVHost
+	eqReceiptProcessor := processor.New(ctx, rabbitConnection, appConfig.EqReceiptProject, appConfig.EqReceiptSubscription)
+	go eqReceiptProcessor.Consume(ctx)
+	go eqReceiptProcessor.Process(ctx)
 
-	// block until we receive a shutdown signal
+	// block until we receive eqReceiptProcessor shutdown signal
 	select {
 	case sig := <-signals:
 		log.Printf("OS Signal Received: %s", sig.String())
 	}
 
-	//cleanup for a graceful shutdown
+	//cleanup for eqReceiptProcessor graceful shutdown
 	log.Printf("Shutting Down")
 
 	//give the app 10 sec to cleanup before being killed
@@ -44,12 +50,18 @@ func main() {
 		//defer shutdownCancel - this will be called once all things are close or when the timeout is reached
 		defer shutdownCancel()
 		log.Printf("Rabbit Cleanup")
-		a.RabbitChan.Close()
-		a.RabbitConn.Close()
+		err = eqReceiptProcessor.RabbitChan.Close()
+		if err != nil {
+			log.Println(errors.Wrap(err, "Error closing rabbit channel during shutdown"))
+		}
+		err = eqReceiptProcessor.RabbitConn.Close()
+		if err != nil {
+			log.Println(errors.Wrap(err, "Error closing rabbit connection during shutdown"))
+		}
 
 	}()
 
-	//block until cancel has been called
+	//block until shutdown cancel has been called
 	<-shutdownCtx.Done()
 
 	log.Printf("Shutdown complete")

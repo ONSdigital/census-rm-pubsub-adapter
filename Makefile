@@ -25,13 +25,12 @@ logs:
 	docker-compose -f dependencies-compose.yml -f pubsub-adapter-compose.yml logs --follow
 
 unit-test:
-	go test -race ./processor/./...
+	go test -race ./... -tags=unitTest
 
-int-test: down
-	docker-compose -f dependencies-compose.yml up -d;
-	./setup_dependencies.sh
-	PUBSUB_EMULATOR_HOST=localhost:8539 go test *.go
+int-test: down up-dependencies
+	PUBSUB_EMULATOR_HOST=localhost:8539 go test .
+	docker-compose -f dependencies-compose.yml down;
 
 test: unit-test int-test
 
-build-test: format build test
+build-test: format build docker test
