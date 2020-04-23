@@ -14,7 +14,7 @@ var a *processor.App
 
 func TestMain(m *testing.M) {
 	ctx := context.Background()
-	a = processor.New(ctx, "amqp://guest:guest@localhost:6672/", "project")
+	a = processor.New(ctx, "amqp://guest:guest@localhost:7672/", "project")
 	code := m.Run()
 	os.Exit(code)
 }
@@ -24,7 +24,7 @@ func TestEqReceipt(t *testing.T) {
 	eqRecieptMsg := `{"timeCreated": "2008-08-24T00:00:00Z", "metadata": {"tx_id": "abc123xxx", "questionnaire_id": "01213213213"}}`
 	expectedRabbitMessage := `{"event":{"type":"RESPONSE_RECEIVED","source":"RECEIPT_SERVICE","channel":"EQ","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"response":{"questionnaireId":"01213213213","unreceipt":false}}}`
 
-	rabbitConn, err := amqp.Dial("amqp://guest:guest@localhost:6672/")
+	rabbitConn, err := amqp.Dial("amqp://guest:guest@localhost:7672/")
 	if err != nil {
 		t.Errorf("Rabbit dial fail: %s", err)
 	}

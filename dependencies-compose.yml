@@ -1,20 +1,20 @@
 version: "3.4"
 services:
   rabbitmq:
-    container_name: rabbitmq
+    container_name: rabbitmq-pubsub-adapter-dev
     image: rabbitmq:3.8.2-management
     ports:
-      - "5369:4369"
-      - "45672:25672"
-      - "6671-6672:5671-5672"
-      - "16671-16672:15671-15672"
-      - "15692:15692"
+      - "6369:4369"
+      - "46672:25672"
+      - "7671-7672:5671-5672"
+      - "17671-17672:15671-15672"
+      - "17692:15692"
     volumes:
       - ./rabbitmq/rabbitmq.config:/etc/rabbitmq/rabbitmq.config:ro
       - ./rabbitmq/definitions.json:/opt/definitions.json:ro
 
   pubsub-emulator:
-    container_name: pubsub-emulator-census-pubsub
+    container_name: pubsub-emulator-pubsub-adapter-dev
     image: bigtruedata/gcloud-pubsub-emulator
     ports:
       - "8539:8539"
