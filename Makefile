@@ -33,4 +33,4 @@ int-test: down up-dependencies
 
 test: unit-test int-test
 
-build-test: format build docker test
+build-test: format build test docker
