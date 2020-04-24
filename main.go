@@ -23,13 +23,7 @@ func main() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
 
-	rabbitConnection := "amqp://" +
-		appConfig.RabbitUsername +
-		":" + appConfig.RabbitPassword +
-		"@" + appConfig.RabbitHost +
-		":" + appConfig.RabbitPort +
-		appConfig.RabbitVHost
-	eqReceiptProcessor := processor.New(ctx, rabbitConnection, appConfig.EqReceiptProject, appConfig.EqReceiptSubscription)
+	eqReceiptProcessor := processor.New(ctx, appConfig)
 	go eqReceiptProcessor.Consume(ctx)
 	go eqReceiptProcessor.Process(ctx)
 

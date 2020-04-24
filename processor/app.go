@@ -3,6 +3,7 @@ package processor
 import (
 	"context"
 	"encoding/json"
+	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 	"log"
 
@@ -19,23 +20,22 @@ type App struct {
 	MessageChan  chan pubsub.Message
 }
 
-func New(ctx context.Context, rabbitConnectionString, projectId string, subscriptionId string) *App {
-
+func New(ctx context.Context, appConfig *config.Configuration) *App {
 	//set up rabbit connection
 	var err error
 	a := &App{}
-	a.RabbitConn, err = amqp.Dial(rabbitConnectionString)
+	a.RabbitConn, err = amqp.Dial(appConfig.RabbitConnectionString)
 	failOnError(err, "Failed to connect to RabbitMQ")
 
 	a.RabbitChan, err = a.RabbitConn.Channel()
 	failOnError(err, "Failed to open a channel")
 
 	//setup pubsub connection
-	a.PubSubClient, err = pubsub.NewClient(ctx, projectId)
+	a.PubSubClient, err = pubsub.NewClient(ctx, appConfig.EqReceiptProject)
 	failOnError(err, "Pubsub client creation failed")
 
 	//setup subscription
-	a.EqReceiptSub = a.PubSubClient.Subscription(subscriptionId)
+	a.EqReceiptSub = a.PubSubClient.Subscription(appConfig.EqReceiptSubscription)
 	a.MessageChan = make(chan pubsub.Message)
 
 	return a
