@@ -11,7 +11,7 @@ type Configuration struct {
 	RabbitHost             string `envconfig:"RABBIT_HOST" required:"true"`
 	RabbitPort             string `envconfig:"RABBIT_PORT" required:"true"`
 	RabbitUsername         string `envconfig:"RABBIT_USERNAME" required:"true"`
-	RabbitPassword         string `envconfig:"RABBIT_PASSOWRD"  required:"true"  json:"-"`
+	RabbitPassword         string `envconfig:"RABBIT_PASSWORD"  required:"true"  json:"-"`
 	RabbitVHost            string `envconfig:"RABBIT_VHOST"  default:"/"`
 	RabbitConnectionString string `json:"-"`
 	EqReceiptProject       string `envconfig:"EQ_RECEIPT_PROJECT" required:"true"`
