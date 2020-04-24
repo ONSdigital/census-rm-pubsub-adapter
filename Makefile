@@ -5,7 +5,7 @@ up:
 up-dependencies:
 	docker-compose up -d rabbitmq pubsub-emulator;
 	./setup_dependencies.sh
-	
+
 down:
 	docker-compose down
 
@@ -27,9 +27,10 @@ logs:
 unit-test:
 	go test -race ./... -tags=unitTest
 
-int-test: down up-dependencies
-	PUBSUB_EMULATOR_HOST=localhost:8539 go test .
-	docker-compose down;
+run-int-test:
+	PUBSUB_EMULATOR_HOST=localhost:8539 go test *.go
+
+int-test: down up-dependencies run-int-test down
 
 test: unit-test int-test
 

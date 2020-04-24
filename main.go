@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	appConfig, err := config.GetConfig()
+	appConfig, err := config.Get()
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "Error getting config at startup"))
 	}
@@ -23,9 +23,15 @@ func main() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
 
-	eqReceiptProcessor := processor.New(ctx, appConfig)
+	// Start EQ receipt processing
+	eqReceiptProcessor := processor.NewEqReceiptProcessor(ctx, appConfig)
 	go eqReceiptProcessor.Consume(ctx)
 	go eqReceiptProcessor.Process(ctx)
+
+	// Start offline receipt processing
+	offlineReceiptProcessor := processor.NewOfflineReceiptProcessor(ctx, appConfig)
+	go offlineReceiptProcessor.Consume(ctx)
+	go offlineReceiptProcessor.Process(ctx)
 
 	// block until we receive eqReceiptProcessor shutdown signal
 	select {

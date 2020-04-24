@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 type RmResponse struct {
 	CaseID          string `json:"caseId,omitempty"`
 	QuestionnaireID string `json:"questionnaireId"`
@@ -11,11 +13,11 @@ type RmPayload struct {
 }
 
 type RmEvent struct {
-	Type          string `json:"type"`
-	Source        string `json:"source"`
-	Channel       string `json:"channel"`
-	DateTime      string `json:"dateTime"`
-	TransactionID string `json:"transactionId"`
+	Type          string    `json:"type"`
+	Source        string    `json:"source"`
+	Channel       string    `json:"channel"`
+	DateTime      time.Time `json:"dateTime"`
+	TransactionID string    `json:"transactionId"`
 }
 
 type RmMessage struct {

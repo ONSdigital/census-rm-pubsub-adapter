@@ -4,10 +4,12 @@ import (
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestConvertEqReceiptToRmMessage(t *testing.T) {
-	eqReceiptMessage := models.EqReceipt{"2008-08-24T00:00:00Z",
+	timeCreated, _ := time.Parse("2006-07-08T03:04:05Z", "2008-08-24T00:00:00Z")
+	eqReceiptMessage := models.EqReceipt{timeCreated,
 		models.EqReceiptMetadata{
 			TransactionID: "abc123xxx", QuestionnaireID: "01213213213"}}
 
@@ -16,7 +18,7 @@ func TestConvertEqReceiptToRmMessage(t *testing.T) {
 			Type:          "RESPONSE_RECEIVED",
 			Source:        "RECEIPT_SERVICE",
 			Channel:       "EQ",
-			DateTime:      "2008-08-24T00:00:00Z",
+			DateTime:      timeCreated,
 			TransactionID: "abc123xxx",
 		},
 		Payload: models.RmPayload{
