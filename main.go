@@ -33,6 +33,16 @@ func main() {
 	go offlineReceiptProcessor.Consume(ctx)
 	go offlineReceiptProcessor.Process(ctx)
 
+	// Start PPO undelivered processing
+	ppoUndeliveredProcessor := processor.NewPpoUndeliveredProcessor(ctx, appConfig)
+	go ppoUndeliveredProcessor.Consume(ctx)
+	go ppoUndeliveredProcessor.Process(ctx)
+
+	// Start QM undelivered processing
+	qmUndeliveredProcessor := processor.NewQmUndeliveredProcessor(ctx, appConfig)
+	go qmUndeliveredProcessor.Consume(ctx)
+	go qmUndeliveredProcessor.Process(ctx)
+
 	// block until we receive eqReceiptProcessor shutdown signal
 	select {
 	case sig := <-signals:

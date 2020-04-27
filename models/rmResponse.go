@@ -27,7 +27,7 @@ type RmMessage struct {
 }
 
 type FulfilmentInformation struct {
-	CaseRef         string `json:"caseRef"`
-	FulfilmentCode  string `json:"fulfilmentCode"`
-	QuestionnaireId string `json:"questionnaireId"`
+	CaseRef         string `json:"caseRef,omitempty"`
+	FulfilmentCode  string `json:"fulfilmentCode,omitempty"`
+	QuestionnaireId string `json:"questionnaireId,omitempty"`
 }

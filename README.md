@@ -16,6 +16,8 @@ RABBIT_USERNAME
 RABBIT_PASSWORD
 EQ_RECEIPT_PROJECT
 OFFLINE_RECEIPT_PROJECT
+QM_UNDELIVERED_SUBSCRIPTION_PROJECT_ID
+PPO_UNDELIVERED_SUBSCRIPTION_PROJECT_ID
 ```
 
 ### Config to run locally against docker-compose dependencies
@@ -29,6 +31,8 @@ EQ_RECEIPT_PROJECT=project
 PUBSUB_EMULATOR_HOST=localhost:8539
 EQ_RECEIPT_PROJECT=project
 OFFLINE_RECEIPT_PROJECT=offline-project
+QM_UNDELIVERED_SUBSCRIPTION_PROJECT_ID=qm-undelivered-project
+PPO_UNDELIVERED_SUBSCRIPTION_PROJECT_ID=ppo-undelivered-project
 ```
 
 ### Config to run locally against docker dev
@@ -42,6 +46,8 @@ EQ_RECEIPT_PROJECT=project
 PUBSUB_EMULATOR_HOST=localhost:8538
 EQ_RECEIPT_PROJECT=project
 OFFLINE_RECEIPT_PROJECT=offline-project
+QM_UNDELIVERED_SUBSCRIPTION_PROJECT_ID=qm-undelivered-project
+PPO_UNDELIVERED_SUBSCRIPTION_PROJECT_ID=ppo-undelivered-project
 ```
 
 ## Running the tests
