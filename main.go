@@ -60,15 +60,14 @@ func main() {
 		cancel()
 		//defer shutdownCancel - this will be called once all things are close or when the timeout is reached
 		defer shutdownCancel()
+
+		// TODO cancel PubSub consumers first
+
 		log.Printf("Rabbit Cleanup")
-		err = eqReceiptProcessor.RabbitChan.Close()
-		if err != nil {
-			log.Println(errors.Wrap(err, "Error closing rabbit channel during shutdown"))
-		}
-		err = eqReceiptProcessor.RabbitConn.Close()
-		if err != nil {
-			log.Println(errors.Wrap(err, "Error closing rabbit connection during shutdown"))
-		}
+		eqReceiptProcessor.Shutdown()
+		offlineReceiptProcessor.Shutdown()
+		ppoUndeliveredProcessor.Shutdown()
+		qmUndeliveredProcessor.Shutdown()
 
 	}()
 

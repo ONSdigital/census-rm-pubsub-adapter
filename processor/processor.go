@@ -56,12 +56,12 @@ func NewProcessor(ctx context.Context,
 	return a
 }
 
-func (a *Processor) Consume(ctx context.Context) {
-	log.Printf("Launching PubSub message listener on subcription %s\n", a.PubSubSubscription.String())
+func (p *Processor) Consume(ctx context.Context) {
+	log.Printf("Launching PubSub message listener on subcription %s\n", p.PubSubSubscription.String())
 
-	err := a.PubSubSubscription.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
+	err := p.PubSubSubscription.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
 		log.Printf("Got message: %q\n", string(msg.Data))
-		a.MessageChan <- *msg
+		p.MessageChan <- *msg
 	})
 	if err != nil {
 		log.Printf("Receive: %v\n", err)
@@ -69,23 +69,23 @@ func (a *Processor) Consume(ctx context.Context) {
 	}
 }
 
-func (a *Processor) Process(ctx context.Context) {
+func (p *Processor) Process(ctx context.Context) {
 	for {
 		select {
-		case msg := <-a.MessageChan:
-			messageReceived, err := a.unmarshallMessage(msg.Data)
+		case msg := <-p.MessageChan:
+			messageReceived, err := p.unmarshallMessage(msg.Data)
 			if err != nil {
-				// TODO Log the error and DLQ the message when unmarshalling fails, printing it out is a temporary solution
+				// TODO Log the error and DLQ the message when unmarshalling fails, printing it out is p temporary solution
 				log.Println(errors.WithMessagef(err, "Error unmarshalling message: %q", string(msg.Data)))
 				msg.Ack()
 				return
 			}
 			log.Printf("Got tx_id: %q\n", messageReceived.GetTransactionId())
-			rmMessageToSend, err := a.convertMessage(messageReceived)
+			rmMessageToSend, err := p.convertMessage(messageReceived)
 			if err != nil {
 				log.Println(errors.Wrap(err, "failed to convert receipt to message"))
 			}
-			err = a.publishEventToRabbit(rmMessageToSend, a.Config.ReceiptRoutingKey, a.Config.EventsExchange)
+			err = p.publishEventToRabbit(rmMessageToSend, p.Config.ReceiptRoutingKey, p.Config.EventsExchange)
 			if err != nil {
 				log.Println(errors.WithMessagef(err, "Failed to publish eq receipt message tx_id: %s", rmMessageToSend.Event.TransactionID))
 				msg.Nack()
@@ -99,14 +99,14 @@ func (a *Processor) Process(ctx context.Context) {
 	}
 }
 
-func (a *Processor) publishEventToRabbit(message *models.RmMessage, routingKey string, exchange string) error {
+func (p *Processor) publishEventToRabbit(message *models.RmMessage, routingKey string, exchange string) error {
 
 	byteMessage, err := json.Marshal(message)
 	if err != nil {
 		return err
 	}
 
-	err = a.RabbitChan.Publish(
+	err = p.RabbitChan.Publish(
 		exchange,
 		routingKey, // routing key (the queue)
 		false,      // mandatory
@@ -122,6 +122,18 @@ func (a *Processor) publishEventToRabbit(message *models.RmMessage, routingKey s
 
 	log.Printf(" [x] Sent %s", string(byteMessage))
 	return nil
+}
+
+func (p *Processor) Shutdown() {
+	// Shutdown Rabbit
+	err := p.RabbitChan.Close()
+	if err != nil {
+		log.Println(errors.Wrapf(err, "Error closing rabbit channel during shutdown of %s processor", p.PubSubSubscription))
+	}
+	err = p.RabbitConn.Close()
+	if err != nil {
+		log.Println(errors.Wrapf(err, "Error closing rabbit connection during shutdown of %s processor", p.PubSubSubscription))
+	}
 }
 
 func failOnError(err error, msg string) {
