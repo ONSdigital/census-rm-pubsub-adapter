@@ -15,6 +15,7 @@ RABBIT_PORT
 RABBIT_USERNAME
 RABBIT_PASSWORD
 EQ_RECEIPT_PROJECT
+OFFLINE_RECEIPT_PROJECT
 ```
 
 ### Config to run locally against docker-compose dependencies
@@ -26,6 +27,21 @@ RABBIT_USERNAME=guest
 RABBIT_PASSWORD=guest
 EQ_RECEIPT_PROJECT=project
 PUBSUB_EMULATOR_HOST=localhost:8539
+EQ_RECEIPT_PROJECT=project
+OFFLINE_RECEIPT_PROJECT=offline-project
+```
+
+### Config to run locally against docker dev
+
+```sh 
+RABBIT_HOST=localhost
+RABBIT_PORT=6672
+RABBIT_USERNAME=guest
+RABBIT_PASSWORD=guest
+EQ_RECEIPT_PROJECT=project
+PUBSUB_EMULATOR_HOST=localhost:8538
+EQ_RECEIPT_PROJECT=project
+OFFLINE_RECEIPT_PROJECT=offline-project
 ```
 
 ## Running the tests
