@@ -3,10 +3,10 @@ package processor
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 	"github.com/pkg/errors"
-	"log"
 )
 
 type OfflineReceiptProcessor struct {
@@ -15,48 +15,24 @@ type OfflineReceiptProcessor struct {
 
 func NewOfflineReceiptProcessor(ctx context.Context, appConfig *config.Configuration) *OfflineReceiptProcessor {
 	offlineReceiptProcessor := &OfflineReceiptProcessor{}
-	offlineReceiptProcessor.Processor = NewProcessor(ctx, appConfig, appConfig.OfflineReceiptProject, appConfig.OfflineReceiptSubscription)
+	offlineReceiptProcessor.Processor = NewProcessor(ctx, appConfig, appConfig.OfflineReceiptProject, appConfig.OfflineReceiptSubscription, convertOfflineReceiptToRmMessage, unmarshalOfflineReceipt)
 	return offlineReceiptProcessor
 }
 
-func (a *OfflineReceiptProcessor) Process(ctx context.Context) {
-	for {
-		select {
-		case msg := <-a.MessageChan:
-			var offlineReceiptReceived models.OfflineReceipt
-			err := json.Unmarshal(msg.Data, &offlineReceiptReceived)
-			if err != nil {
-				// TODO Log the error and DLQ the message when unmarshalling fails, printing it out is a temporary solution
-				log.Println(errors.WithMessagef(err, "Error unmarshalling message: %q", string(msg.Data)))
-				msg.Ack()
-				return
-			}
-
-			log.Printf("Got QID: %q\n", offlineReceiptReceived.QuestionnaireID)
-			rmMessageToSend, err := convertOfflineReceiptToRmMessage(&offlineReceiptReceived)
-			if err != nil {
-				log.Println(errors.Wrap(err, "failed to convert receipt to message"))
-			}
-			err = a.publishEventToRabbit(rmMessageToSend, a.Config.ReceiptRoutingKey, a.Config.EventsExchange)
-			if err != nil {
-				log.Println(errors.WithMessagef(err, "Failed to publish eq receipt message tx_id: %s", rmMessageToSend.Event.TransactionID))
-				msg.Nack()
-			} else {
-				msg.Ack()
-			}
-		case <-ctx.Done():
-			//stop the loop from consuming messages
-			return
-		}
+func unmarshalOfflineReceipt(data []byte) (models.PubSubMessage, error) {
+	var offlineReceipt models.OfflineReceipt
+	err := json.Unmarshal(data, &offlineReceipt)
+	if err != nil {
+		return nil, err
 	}
-
+	return offlineReceipt, nil
 }
 
-func convertOfflineReceiptToRmMessage(offlineReceipt *models.OfflineReceipt) (*models.RmMessage, error) {
-	if offlineReceipt == nil {
-		return nil, errors.New("receipt has nil content")
+func convertOfflineReceiptToRmMessage(receipt models.PubSubMessage) (*models.RmMessage, error) {
+	offlineReceipt, ok := receipt.(models.OfflineReceipt)
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("Wrong message model given to convertEqReceiptToRmMessage: %T, only accepts EqReceipt, tx_id %q", receipt, receipt.GetQuestionnaireId()))
 	}
-
 	return &models.RmMessage{
 		Event: models.RmEvent{
 			Type:          "RESPONSE_RECEIVED",

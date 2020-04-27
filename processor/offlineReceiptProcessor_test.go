@@ -32,7 +32,7 @@ func TestConvertOfflineReceiptToRmMessage(t *testing.T) {
 			},
 		}}
 
-	rabbitMessage, err := convertOfflineReceiptToRmMessage(&offlineReceiptMessage)
+	rabbitMessage, err := convertOfflineReceiptToRmMessage(offlineReceiptMessage)
 	if err != nil {
 		t.Errorf("failed: %s", err)
 	}

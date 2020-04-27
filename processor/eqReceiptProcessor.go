@@ -3,10 +3,9 @@ package processor
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
-	"log"
-
 	"github.com/pkg/errors"
 )
 
@@ -16,46 +15,23 @@ type EqReceiptProcessor struct {
 
 func NewEqReceiptProcessor(ctx context.Context, appConfig *config.Configuration) *EqReceiptProcessor {
 	eqReceiptProcessor := &EqReceiptProcessor{}
-	eqReceiptProcessor.Processor = NewProcessor(ctx, appConfig, appConfig.EqReceiptProject, appConfig.EqReceiptSubscription)
+	eqReceiptProcessor.Processor = NewProcessor(ctx, appConfig, appConfig.EqReceiptProject, appConfig.EqReceiptSubscription, convertEqReceiptToRmMessage, unmarshalEqReceipt)
 	return eqReceiptProcessor
 }
 
-func (a *EqReceiptProcessor) Process(ctx context.Context) {
-	for {
-		select {
-		case msg := <-a.MessageChan:
-			var eqReceiptReceived models.EqReceipt
-			err := json.Unmarshal(msg.Data, &eqReceiptReceived)
-			if err != nil {
-				// TODO Log the error and DLQ the message when unmarshalling fails, printing it out is a temporary solution
-				log.Println(errors.WithMessagef(err, "Error unmarshalling message: %q", string(msg.Data)))
-				msg.Ack()
-				return
-			}
-
-			log.Printf("Got QID: %q\n", eqReceiptReceived.Metadata.QuestionnaireID)
-			rmMessageToSend, err := convertEqReceiptToRmMessage(&eqReceiptReceived)
-			if err != nil {
-				log.Println(errors.Wrap(err, "failed to convert receipt to message"))
-			}
-			err = a.publishEventToRabbit(rmMessageToSend, a.Config.ReceiptRoutingKey, a.Config.EventsExchange)
-			if err != nil {
-				log.Println(errors.WithMessagef(err, "Failed to publish eq receipt message tx_id: %s", rmMessageToSend.Event.TransactionID))
-				msg.Nack()
-			} else {
-				msg.Ack()
-			}
-		case <-ctx.Done():
-			//stop the loop from consuming messages
-			return
-		}
+func unmarshalEqReceipt(data []byte) (models.PubSubMessage, error) {
+	var eqReceipt models.EqReceipt
+	err := json.Unmarshal(data, &eqReceipt)
+	if err != nil {
+		return nil, err
 	}
-
+	return eqReceipt, nil
 }
 
-func convertEqReceiptToRmMessage(eqReceipt *models.EqReceipt) (*models.RmMessage, error) {
-	if eqReceipt == nil {
-		return nil, errors.New("receipt has nil content")
+func convertEqReceiptToRmMessage(receipt models.PubSubMessage) (*models.RmMessage, error) {
+	eqReceipt, ok := receipt.(models.EqReceipt)
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("Wrong message model given to convertEqReceiptToRmMessage: %T, only accepts EqReceipt, tx_id %q", receipt, receipt.GetQuestionnaireId()))
 	}
 
 	return &models.RmMessage{

@@ -6,24 +6,39 @@ import (
 	"encoding/json"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
+	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
 	"log"
 )
 
+type pubSubMessageUnmarshaller func([]byte) (models.PubSubMessage, error)
+
+type messageConverter func(message models.PubSubMessage) (*models.RmMessage, error)
+
 type Processor struct {
-	RabbitConn         *amqp.Connection
-	RabbitChan         *amqp.Channel
-	Config             *config.Configuration
-	PubSubClient       *pubsub.Client
-	PubSubSubscription *pubsub.Subscription
-	MessageChan        chan pubsub.Message
+	RabbitConn              *amqp.Connection
+	RabbitChan              *amqp.Channel
+	Config                  *config.Configuration
+	PubSubClient            *pubsub.Client
+	PubSubSubscription      *pubsub.Subscription
+	MessageChan             chan pubsub.Message
+	unMarshallPubSubMessage pubSubMessageUnmarshaller
+	convertMessage          messageConverter
 }
 
-func NewProcessor(ctx context.Context, appConfig *config.Configuration, pubSubProject string, pubSubSubscription string) *Processor {
-	//set up rabbit connection
+func NewProcessor(ctx context.Context,
+	appConfig *config.Configuration,
+	pubSubProject string,
+	pubSubSubscription string,
+	messageConverter messageConverter,
+	messageUnmarshaller pubSubMessageUnmarshaller) *Processor {
 	var err error
 	a := &Processor{}
 	a.Config = appConfig
+	a.convertMessage = messageConverter
+	a.unMarshallPubSubMessage = messageUnmarshaller
+
+	//set up rabbit connection
 	a.RabbitConn, err = amqp.Dial(appConfig.RabbitConnectionString)
 	failOnError(err, "Failed to connect to RabbitMQ")
 
@@ -51,6 +66,36 @@ func (a *Processor) Consume(ctx context.Context) {
 	if err != nil {
 		log.Printf("Receive: %v\n", err)
 		return
+	}
+}
+
+func (a *Processor) Process(ctx context.Context) {
+	for {
+		select {
+		case msg := <-a.MessageChan:
+			messageReceived, err := a.unMarshallPubSubMessage(msg.Data)
+			if err != nil {
+				// TODO Log the error and DLQ the message when unmarshalling fails, printing it out is a temporary solution
+				log.Println(errors.WithMessagef(err, "Error unmarshalling message: %q", string(msg.Data)))
+				msg.Ack()
+				return
+			}
+			log.Printf("Got QID: %q\n", messageReceived.GetQuestionnaireId())
+			rmMessageToSend, err := a.convertMessage(messageReceived)
+			if err != nil {
+				log.Println(errors.Wrap(err, "failed to convert receipt to message"))
+			}
+			err = a.publishEventToRabbit(rmMessageToSend, a.Config.ReceiptRoutingKey, a.Config.EventsExchange)
+			if err != nil {
+				log.Println(errors.WithMessagef(err, "Failed to publish eq receipt message tx_id: %s", rmMessageToSend.Event.TransactionID))
+				msg.Nack()
+			} else {
+				msg.Ack()
+			}
+		case <-ctx.Done():
+			//stop the loop from consuming messages
+			return
+		}
 	}
 }
 
