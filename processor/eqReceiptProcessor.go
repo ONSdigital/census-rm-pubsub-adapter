@@ -31,7 +31,7 @@ func unmarshalEqReceipt(data []byte) (models.PubSubMessage, error) {
 func convertEqReceiptToRmMessage(receipt models.PubSubMessage) (*models.RmMessage, error) {
 	eqReceipt, ok := receipt.(models.EqReceipt)
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("Wrong message model given to convertEqReceiptToRmMessage: %T, only accepts EqReceipt, tx_id %q", receipt, receipt.GetQuestionnaireId()))
+		return nil, errors.New(fmt.Sprintf("Wrong message model given to convertEqReceiptToRmMessage: %T, only accepts EqReceipt, tx_id: %q", receipt, receipt.GetTransactionID()))
 	}
 
 	return &models.RmMessage{

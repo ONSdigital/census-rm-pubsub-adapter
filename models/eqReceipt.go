@@ -13,10 +13,6 @@ type EqReceipt struct {
 	Metadata    EqReceiptMetadata `json:"metadata"`
 }
 
-func (e EqReceipt) GetQuestionnaireId() string {
-	return e.Metadata.QuestionnaireID
-}
-
 func (e EqReceipt) GetTransactionID() string {
 	return e.Metadata.TransactionID
 }

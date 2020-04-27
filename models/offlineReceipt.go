@@ -10,10 +10,6 @@ type OfflineReceipt struct {
 	Channel         string    `json:"channel"`
 }
 
-func (o OfflineReceipt) GetQuestionnaireId() string {
-	return o.QuestionnaireID
-}
-
 func (o OfflineReceipt) GetTransactionID() string {
 	return o.TransactionID
 }

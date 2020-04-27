@@ -80,7 +80,7 @@ func (a *Processor) Process(ctx context.Context) {
 				msg.Ack()
 				return
 			}
-			log.Printf("Got QID: %q\n", messageReceived.GetQuestionnaireId())
+			log.Printf("Got tx_id: %q\n", messageReceived.GetTransactionID())
 			rmMessageToSend, err := a.convertMessage(messageReceived)
 			if err != nil {
 				log.Println(errors.Wrap(err, "failed to convert receipt to message"))
