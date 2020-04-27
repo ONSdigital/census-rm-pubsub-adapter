@@ -19,3 +19,18 @@ services:
     ports:
       - "8539:8539"
     command: start --host-port 0.0.0.0:8539
+
+  pubsub-adapter:
+    container_name: pubsub-adapter-dev
+    image: eu.gcr.io/census-rm-ci/census-rm-pubsub-adapter
+    environment:
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator-pubsub-adapter-dev:8539
+      - RABBIT_CONNECTION=amqp://guest:guest@rabbitmq-pubsub-adapter-dev:5672/
+      - RABBIT_USERNAME=guest
+      - RABBIT_PASSWORD=guest
+      - RABBIT_HOST=rabbitmq-pubsub-adapter-dev
+      - RABBIT_PORT=5672
+      - RABBIT_VHOST=/
+      - EQ_RECEIPT_PROJECT=project
+      - EQ_RECEIPT_SUBSCRIPTION=rm-receipt-subscription
+    restart: on-failure
