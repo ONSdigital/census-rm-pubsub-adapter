@@ -4,12 +4,12 @@ import "time"
 
 type OfflineReceipt struct {
 	TimeCreated     time.Time `json:"dateTime"`
-	TransactionID   string    `json:"tx_id"`
-	QuestionnaireID string    `json:"questionnaire_id"`
+	TransactionId   string    `json:"tx_id"`
+	QuestionnaireId string    `json:"questionnaire_id"`
 	Unreceipt       bool      `json:"unreceipt"`
 	Channel         string    `json:"channel"`
 }
 
-func (o OfflineReceipt) GetTransactionID() string {
-	return o.TransactionID
+func (o OfflineReceipt) GetTransactionId() string {
+	return o.TransactionId
 }

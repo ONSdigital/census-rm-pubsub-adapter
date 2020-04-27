@@ -9,7 +9,8 @@ type RmResponse struct {
 }
 
 type RmPayload struct {
-	Response RmResponse `json:"response"`
+	Response              *RmResponse            `json:"response,omitempty"`
+	FulfilmentInformation *FulfilmentInformation `json:"fulfilmentInformation,omitempty"`
 }
 
 type RmEvent struct {
@@ -23,4 +24,10 @@ type RmEvent struct {
 type RmMessage struct {
 	Event   RmEvent   `json:"event"`
 	Payload RmPayload `json:"payload"`
+}
+
+type FulfilmentInformation struct {
+	CaseRef         string `json:"caseRef"`
+	FulfilmentCode  string `json:"fulfilmentCode"`
+	QuestionnaireId string `json:"questionnaireId"`
 }

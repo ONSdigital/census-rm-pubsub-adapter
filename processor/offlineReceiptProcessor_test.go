@@ -11,8 +11,8 @@ func TestConvertOfflineReceiptToRmMessage(t *testing.T) {
 	timeCreated, _ := time.Parse("2006-07-08T03:04:05Z", "2008-08-24T00:00:00Z")
 	offlineReceiptMessage := models.OfflineReceipt{
 		TimeCreated:     timeCreated,
-		TransactionID:   "abc123xxx",
-		QuestionnaireID: "01213213213",
+		TransactionId:   "abc123xxx",
+		QuestionnaireId: "01213213213",
 		Unreceipt:       false,
 		Channel:         "test",
 	}
@@ -26,7 +26,7 @@ func TestConvertOfflineReceiptToRmMessage(t *testing.T) {
 			TransactionID: "abc123xxx",
 		},
 		Payload: models.RmPayload{
-			Response: models.RmResponse{
+			Response: &models.RmResponse{
 				QuestionnaireID: "01213213213",
 				Unreceipt:       false,
 			},

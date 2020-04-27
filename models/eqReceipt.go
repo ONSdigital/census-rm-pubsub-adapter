@@ -3,8 +3,8 @@ package models
 import "time"
 
 type EqReceiptMetadata struct {
-	TransactionID   string `json:"tx_id"`
-	QuestionnaireID string `json:"questionnaire_id"`
+	TransactionId   string `json:"tx_id"`
+	QuestionnaireId string `json:"questionnaire_id"`
 	CaseID          string `json:"caseId,omitempty"`
 }
 
@@ -13,6 +13,6 @@ type EqReceipt struct {
 	Metadata    EqReceiptMetadata `json:"metadata"`
 }
 
-func (e EqReceipt) GetTransactionID() string {
-	return e.Metadata.TransactionID
+func (e EqReceipt) GetTransactionId() string {
+	return e.Metadata.TransactionId
 }

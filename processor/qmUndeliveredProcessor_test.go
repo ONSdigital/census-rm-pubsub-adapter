@@ -7,31 +7,29 @@ import (
 	"time"
 )
 
-func TestConvertEqReceiptToRmMessage(t *testing.T) {
+func TestConvertQmUndeliveredToRmMessage(t *testing.T) {
 	timeCreated, _ := time.Parse("2006-07-08T03:04:05Z", "2008-08-24T00:00:00Z")
-	eqReceiptMessage := models.EqReceipt{
-		TimeCreated: timeCreated,
-		Metadata: models.EqReceiptMetadata{
-			TransactionId:   "abc123xxx",
-			QuestionnaireId: "01213213213",
-		},
+	qmUndeliveredMessage := models.QmUndelivered{
+		DateTime:        timeCreated,
+		TransactionId:   "abc123xxx",
+		QuestionnaireId: "01213213213",
 	}
 
 	expectedRabbitMessage := models.RmMessage{
 		Event: models.RmEvent{
-			Type:          "RESPONSE_RECEIVED",
+			Type:          "UNDELIVERED_MAIL_REPORTED",
 			Source:        "RECEIPT_SERVICE",
-			Channel:       "EQ",
+			Channel:       "QM",
 			DateTime:      timeCreated,
 			TransactionID: "abc123xxx",
 		},
 		Payload: models.RmPayload{
-			Response: &models.RmResponse{
-				QuestionnaireID: "01213213213",
+			FulfilmentInformation: &models.FulfilmentInformation{
+				QuestionnaireId: "01213213213",
 			},
 		}}
 
-	rabbitMessage, err := convertEqReceiptToRmMessage(eqReceiptMessage)
+	rabbitMessage, err := convertQmUndeliveredToRmMessage(qmUndeliveredMessage)
 	if err != nil {
 		t.Errorf("failed: %s", err)
 	}
