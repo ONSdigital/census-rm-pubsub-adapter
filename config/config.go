@@ -6,7 +6,6 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
-// Configuration structure which hold information for configuring the import API
 type Configuration struct {
 	RabbitHost             string `envconfig:"RABBIT_HOST" required:"true"`
 	RabbitPort             string `envconfig:"RABBIT_PORT" required:"true"`
@@ -20,8 +19,7 @@ type Configuration struct {
 
 var cfg *Configuration
 
-// Get the application and returns the configuration structure
-func Get() (*Configuration, error) {
+func GetConfig() (*Configuration, error) {
 	if cfg != nil {
 		return cfg, nil
 	}

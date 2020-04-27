@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	appConfig, err := config.Get()
+	appConfig, err := config.GetConfig()
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "Error getting config at startup"))
 	}

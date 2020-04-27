@@ -1,13 +1,13 @@
 up:
-	docker-compose -f dependencies-compose.yml -f pubsub-adapter-compose.yml up -d;
+	docker-compose up -d;
 	./setup_dependencies.sh
 
 up-dependencies:
-	docker-compose -f dependencies-compose.yml up -d;
+	docker-compose up -d rabbitmq pubsub-emulator;
 	./setup_dependencies.sh
 	
 down:
-	docker-compose -f dependencies-compose.yml -f pubsub-adapter-compose.yml down
+	docker-compose down
 
 docker:
 	docker build -t eu.gcr.io/census-rm-ci/census-rm-pubsub-adapter .
@@ -22,14 +22,14 @@ format-check:
 	./format_check.sh
 
 logs:
-	docker-compose -f dependencies-compose.yml -f pubsub-adapter-compose.yml logs --follow
+	docker-compose logs --follow
 
 unit-test:
 	go test -race ./... -tags=unitTest
 
 int-test: down up-dependencies
 	PUBSUB_EMULATOR_HOST=localhost:8539 go test .
-	docker-compose -f dependencies-compose.yml down;
+	docker-compose down;
 
 test: unit-test int-test
 

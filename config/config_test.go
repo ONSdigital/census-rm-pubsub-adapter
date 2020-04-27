@@ -8,7 +8,7 @@ import (
 
 func TestGetErrorsWithoutValues(t *testing.T) {
 	cfg = nil
-	_, err := Get()
+	_, err := GetConfig()
 	if err == nil {
 		t.Log("Config get did not return an error in prod mode when not provided any values")
 		t.Fail()
