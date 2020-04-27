@@ -32,9 +32,9 @@ func TestMain(m *testing.M) {
 		PpoUndeliveredProject:      "ppo-undelivered-project",
 		PpoUndeliveredTopic:        "ppo-undelivered-mail-topic",
 		PpoUndeliveredSubscription: "rm-ppo-undelivered-subscription",
-		QmUndeliveredProject:      "qm-undelivered-project",
-		QmUndeliveredTopic:        "qm-undelivered-mail-topic",
-		QmUndeliveredSubscription: "rm-qm-undelivered-subscription",
+		QmUndeliveredProject:       "qm-undelivered-project",
+		QmUndeliveredTopic:         "qm-undelivered-mail-topic",
+		QmUndeliveredSubscription:  "rm-qm-undelivered-subscription",
 	}
 	code := m.Run()
 	os.Exit(code)
