@@ -11,19 +11,19 @@ import (
 	"log"
 )
 
-type pubSubMessageUnmarshaller func([]byte) (models.PubSubMessage, error)
+type messageUnmarshaller func([]byte) (models.PubSubMessage, error)
 
 type messageConverter func(message models.PubSubMessage) (*models.RmMessage, error)
 
 type Processor struct {
-	RabbitConn              *amqp.Connection
-	RabbitChan              *amqp.Channel
-	Config                  *config.Configuration
-	PubSubClient            *pubsub.Client
-	PubSubSubscription      *pubsub.Subscription
-	MessageChan             chan pubsub.Message
-	unMarshallPubSubMessage pubSubMessageUnmarshaller
-	convertMessage          messageConverter
+	RabbitConn         *amqp.Connection
+	RabbitChan         *amqp.Channel
+	Config             *config.Configuration
+	PubSubClient       *pubsub.Client
+	PubSubSubscription *pubsub.Subscription
+	MessageChan        chan pubsub.Message
+	unmarshallMessage  messageUnmarshaller
+	convertMessage     messageConverter
 }
 
 func NewProcessor(ctx context.Context,
@@ -31,12 +31,12 @@ func NewProcessor(ctx context.Context,
 	pubSubProject string,
 	pubSubSubscription string,
 	messageConverter messageConverter,
-	messageUnmarshaller pubSubMessageUnmarshaller) *Processor {
+	messageUnmarshaller messageUnmarshaller) *Processor {
 	var err error
 	a := &Processor{}
 	a.Config = appConfig
 	a.convertMessage = messageConverter
-	a.unMarshallPubSubMessage = messageUnmarshaller
+	a.unmarshallMessage = messageUnmarshaller
 
 	//set up rabbit connection
 	a.RabbitConn, err = amqp.Dial(appConfig.RabbitConnectionString)
@@ -73,7 +73,7 @@ func (a *Processor) Process(ctx context.Context) {
 	for {
 		select {
 		case msg := <-a.MessageChan:
-			messageReceived, err := a.unMarshallPubSubMessage(msg.Data)
+			messageReceived, err := a.unmarshallMessage(msg.Data)
 			if err != nil {
 				// TODO Log the error and DLQ the message when unmarshalling fails, printing it out is a temporary solution
 				log.Println(errors.WithMessagef(err, "Error unmarshalling message: %q", string(msg.Data)))
