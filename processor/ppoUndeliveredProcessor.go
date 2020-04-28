@@ -15,7 +15,7 @@ type ppoUndeliveredProcessor struct {
 
 func NewPpoUndeliveredProcessor(ctx context.Context, appConfig *config.Configuration) *ppoUndeliveredProcessor {
 	ppoUndeliveredProcessor := &ppoUndeliveredProcessor{}
-	ppoUndeliveredProcessor.Processor = NewProcessor(ctx, appConfig, appConfig.PpoUndeliveredProject, appConfig.PpoUndeliveredSubscription, convertPpoUndeliveredToRmMessage, unmarshalPpoUndelivered)
+	ppoUndeliveredProcessor.Processor = NewProcessor(ctx, appConfig, appConfig.PpoUndeliveredProject, appConfig.PpoUndeliveredSubscription, appConfig.UndeliveredRoutingKey, convertPpoUndeliveredToRmMessage, unmarshalPpoUndelivered)
 	return ppoUndeliveredProcessor
 }
 

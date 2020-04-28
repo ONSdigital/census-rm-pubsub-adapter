@@ -15,7 +15,7 @@ type OfflineReceiptProcessor struct {
 
 func NewOfflineReceiptProcessor(ctx context.Context, appConfig *config.Configuration) *OfflineReceiptProcessor {
 	offlineReceiptProcessor := &OfflineReceiptProcessor{}
-	offlineReceiptProcessor.Processor = NewProcessor(ctx, appConfig, appConfig.OfflineReceiptProject, appConfig.OfflineReceiptSubscription, convertOfflineReceiptToRmMessage, unmarshalOfflineReceipt)
+	offlineReceiptProcessor.Processor = NewProcessor(ctx, appConfig, appConfig.OfflineReceiptProject, appConfig.OfflineReceiptSubscription, appConfig.ReceiptRoutingKey, convertOfflineReceiptToRmMessage, unmarshalOfflineReceipt)
 	return offlineReceiptProcessor
 }
 

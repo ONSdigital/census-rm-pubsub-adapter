@@ -18,6 +18,7 @@ type messageConverter func(message models.PubSubMessage) (*models.RmMessage, err
 type Processor struct {
 	RabbitConn         *amqp.Connection
 	RabbitChan         *amqp.Channel
+	RabbitRoutingKey   string
 	Config             *config.Configuration
 	PubSubClient       *pubsub.Client
 	PubSubSubscription *pubsub.Subscription
@@ -30,30 +31,32 @@ func NewProcessor(ctx context.Context,
 	appConfig *config.Configuration,
 	pubSubProject string,
 	pubSubSubscription string,
+	routingKey string,
 	messageConverter messageConverter,
 	messageUnmarshaller messageUnmarshaller) *Processor {
 	var err error
-	a := &Processor{}
-	a.Config = appConfig
-	a.convertMessage = messageConverter
-	a.unmarshallMessage = messageUnmarshaller
+	p := &Processor{}
+	p.Config = appConfig
+	p.RabbitRoutingKey = routingKey
+	p.convertMessage = messageConverter
+	p.unmarshallMessage = messageUnmarshaller
 
 	//set up rabbit connection
-	a.RabbitConn, err = amqp.Dial(appConfig.RabbitConnectionString)
+	p.RabbitConn, err = amqp.Dial(appConfig.RabbitConnectionString)
 	failOnError(err, "Failed to connect to RabbitMQ")
 
-	a.RabbitChan, err = a.RabbitConn.Channel()
-	failOnError(err, "Failed to open a channel")
+	p.RabbitChan, err = p.RabbitConn.Channel()
+	failOnError(err, "Failed to open p channel")
 
 	//setup pubsub connection
-	a.PubSubClient, err = pubsub.NewClient(ctx, pubSubProject)
+	p.PubSubClient, err = pubsub.NewClient(ctx, pubSubProject)
 	failOnError(err, "Pubsub client creation failed")
 
 	//setup subscription
-	a.PubSubSubscription = a.PubSubClient.Subscription(pubSubSubscription)
-	a.MessageChan = make(chan pubsub.Message)
+	p.PubSubSubscription = p.PubSubClient.Subscription(pubSubSubscription)
+	p.MessageChan = make(chan pubsub.Message)
 
-	return a
+	return p
 }
 
 func (p *Processor) Consume(ctx context.Context) {
@@ -83,11 +86,11 @@ func (p *Processor) Process(ctx context.Context) {
 			log.Printf("Got tx_id: %q\n", messageReceived.GetTransactionId())
 			rmMessageToSend, err := p.convertMessage(messageReceived)
 			if err != nil {
-				log.Println(errors.Wrap(err, "failed to convert receipt to message"))
+				log.Println(errors.Wrapf(err, "Failed to convert message, tx_id: %s", messageReceived.GetTransactionId()))
 			}
-			err = p.publishEventToRabbit(rmMessageToSend, p.Config.ReceiptRoutingKey, p.Config.EventsExchange)
+			err = p.publishEventToRabbit(rmMessageToSend, p.RabbitRoutingKey, p.Config.EventsExchange)
 			if err != nil {
-				log.Println(errors.WithMessagef(err, "Failed to publish eq receipt message tx_id: %s", rmMessageToSend.Event.TransactionID))
+				log.Println(errors.WithMessagef(err, "Failed to publish message, tx_id: %s", rmMessageToSend.Event.TransactionID))
 				msg.Nack()
 			} else {
 				msg.Ack()
@@ -120,18 +123,15 @@ func (p *Processor) publishEventToRabbit(message *models.RmMessage, routingKey s
 		return err
 	}
 
-	log.Printf(" [x] Sent %s", string(byteMessage))
+	log.Printf(" [x] routingKey: %s, Sent %s", routingKey, string(byteMessage))
 	return nil
 }
 
 func (p *Processor) Shutdown() {
-	// Shutdown Rabbit
-	err := p.RabbitChan.Close()
-	if err != nil {
+	if err := p.RabbitChan.Close(); err != nil {
 		log.Println(errors.Wrapf(err, "Error closing rabbit channel during shutdown of %s processor", p.PubSubSubscription))
 	}
-	err = p.RabbitConn.Close()
-	if err != nil {
+	if err := p.RabbitConn.Close(); err != nil {
 		log.Println(errors.Wrapf(err, "Error closing rabbit connection during shutdown of %s processor", p.PubSubSubscription))
 	}
 }

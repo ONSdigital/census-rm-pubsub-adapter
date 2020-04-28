@@ -61,8 +61,6 @@ func main() {
 		//defer shutdownCancel - this will be called once all things are close or when the timeout is reached
 		defer shutdownCancel()
 
-		// TODO cancel PubSub consumers first
-
 		log.Printf("Rabbit Cleanup")
 		eqReceiptProcessor.Shutdown()
 		offlineReceiptProcessor.Shutdown()

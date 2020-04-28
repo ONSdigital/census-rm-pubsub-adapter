@@ -15,7 +15,7 @@ type EqReceiptProcessor struct {
 
 func NewEqReceiptProcessor(ctx context.Context, appConfig *config.Configuration) *EqReceiptProcessor {
 	eqReceiptProcessor := &EqReceiptProcessor{}
-	eqReceiptProcessor.Processor = NewProcessor(ctx, appConfig, appConfig.EqReceiptProject, appConfig.EqReceiptSubscription, convertEqReceiptToRmMessage, unmarshalEqReceipt)
+	eqReceiptProcessor.Processor = NewProcessor(ctx, appConfig, appConfig.EqReceiptProject, appConfig.EqReceiptSubscription, appConfig.ReceiptRoutingKey, convertEqReceiptToRmMessage, unmarshalEqReceipt)
 	return eqReceiptProcessor
 }
 

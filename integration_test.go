@@ -22,7 +22,8 @@ func TestMain(m *testing.M) {
 	ctx = context.Background()
 	cfg = &config.Configuration{
 		RabbitConnectionString:     "amqp://guest:guest@localhost:7672/",
-		ReceiptRoutingKey:          "goTestQueue",
+		ReceiptRoutingKey:          "goTestReceiptQueue",
+		UndeliveredRoutingKey:      "goTestUndeliveredQueue",
 		EqReceiptProject:           "project",
 		EqReceiptSubscription:      "rm-receipt-subscription",
 		EqReceiptTopic:             "eq-submission-topic",
@@ -57,7 +58,7 @@ func TestEqReceipt(t *testing.T) {
 		t.Errorf("Rabbit Channel Fail: %s", err)
 	}
 	defer rabbitChan.Close()
-	rabbitChan.QueuePurge("goTestQueue", true)
+	rabbitChan.QueuePurge(cfg.ReceiptRoutingKey, true)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	pubSubClient, err := pubsub.NewClient(ctx, cfg.EqReceiptProject)
@@ -76,7 +77,7 @@ func TestEqReceipt(t *testing.T) {
 	go eqReceiptProcessor.Consume(ctx)
 	go eqReceiptProcessor.Process(ctx)
 
-	msgs, err := rabbitChan.Consume("goTestQueue", "", false, false, false, false, nil)
+	msgs, err := rabbitChan.Consume(cfg.ReceiptRoutingKey, "", false, false, false, false, nil)
 	if err != nil {
 		t.Errorf("Rabbit consume failed: %s", err)
 	}
@@ -113,7 +114,7 @@ func TestOfflineReceipt(t *testing.T) {
 		t.Errorf("Rabbit Channel Fail: %s", err)
 	}
 	defer rabbitChan.Close()
-	rabbitChan.QueuePurge("goTestQueue", true)
+	rabbitChan.QueuePurge(cfg.ReceiptRoutingKey, true)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	pubSubClient, err := pubsub.NewClient(ctx, cfg.OfflineReceiptProject)
@@ -132,7 +133,7 @@ func TestOfflineReceipt(t *testing.T) {
 	go offlineReceiptProcessor.Consume(ctx)
 	go offlineReceiptProcessor.Process(ctx)
 
-	msgs, err := rabbitChan.Consume("goTestQueue", "", false, false, false, false, nil)
+	msgs, err := rabbitChan.Consume(cfg.ReceiptRoutingKey, "", false, false, false, false, nil)
 	if err != nil {
 		t.Errorf("Rabbit consume failed: %s", err)
 	}
@@ -169,7 +170,7 @@ func TestPpoUndelivered(t *testing.T) {
 		t.Errorf("Rabbit Channel Fail: %s", err)
 	}
 	defer rabbitChan.Close()
-	rabbitChan.QueuePurge("goTestQueue", true)
+	rabbitChan.QueuePurge(cfg.UndeliveredRoutingKey, true)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	pubSubClient, err := pubsub.NewClient(ctx, cfg.PpoUndeliveredProject)
@@ -188,7 +189,7 @@ func TestPpoUndelivered(t *testing.T) {
 	go ppoUndeliveredProcessor.Consume(ctx)
 	go ppoUndeliveredProcessor.Process(ctx)
 
-	msgs, err := rabbitChan.Consume("goTestQueue", "", false, false, false, false, nil)
+	msgs, err := rabbitChan.Consume(cfg.UndeliveredRoutingKey, "", false, false, false, false, nil)
 	if err != nil {
 		t.Errorf("Rabbit consume failed: %s", err)
 	}
@@ -225,7 +226,7 @@ func TestQmUndelivered(t *testing.T) {
 		t.Errorf("Rabbit Channel Fail: %s", err)
 	}
 	defer rabbitChan.Close()
-	rabbitChan.QueuePurge("goTestQueue", true)
+	rabbitChan.QueuePurge(cfg.UndeliveredRoutingKey, true)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	pubSubClient, err := pubsub.NewClient(ctx, cfg.QmUndeliveredProject)
@@ -244,7 +245,7 @@ func TestQmUndelivered(t *testing.T) {
 	go qmUndeliveredProcessor.Consume(ctx)
 	go qmUndeliveredProcessor.Process(ctx)
 
-	msgs, err := rabbitChan.Consume("goTestQueue", "", false, false, false, false, nil)
+	msgs, err := rabbitChan.Consume(cfg.UndeliveredRoutingKey, "", false, false, false, false, nil)
 	if err != nil {
 		t.Errorf("Rabbit consume failed: %s", err)
 	}

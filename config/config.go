@@ -16,7 +16,7 @@ type Configuration struct {
 	RabbitConnectionString string `json:"-"`
 	EventsExchange         string `envconfig:"RABBIT_EXCHANGE"  default:"events"`
 	ReceiptRoutingKey      string `envconfig:"RECEIPT_ROUTING_KEY"  default:"event.response.receipt"`
-	UndeliveredRoutingKey  string `envconfig:"UNDELIVERED__ROUTING_KEY"  default:"event.fulfilment.undelivered"`
+	UndeliveredRoutingKey  string `envconfig:"UNDELIVERED_ROUTING_KEY"  default:"event.fulfilment.undelivered"`
 
 	// PubSub
 	EqReceiptProject           string `envconfig:"EQ_RECEIPT_PROJECT" required:"true"`

@@ -15,7 +15,7 @@ type qmUndeliveredProcessor struct {
 
 func NewQmUndeliveredProcessor(ctx context.Context, appConfig *config.Configuration) *qmUndeliveredProcessor {
 	qmUndeliveredProcessor := &qmUndeliveredProcessor{}
-	qmUndeliveredProcessor.Processor = NewProcessor(ctx, appConfig, appConfig.QmUndeliveredProject, appConfig.QmUndeliveredSubscription, convertQmUndeliveredToRmMessage, unmarshalQmUndelivered)
+	qmUndeliveredProcessor.Processor = NewProcessor(ctx, appConfig, appConfig.QmUndeliveredProject, appConfig.QmUndeliveredSubscription, appConfig.UndeliveredRoutingKey, convertQmUndeliveredToRmMessage, unmarshalQmUndelivered)
 	return qmUndeliveredProcessor
 }
 
