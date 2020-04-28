@@ -127,7 +127,7 @@ func (p *Processor) publishEventToRabbit(message *models.RmMessage, routingKey s
 	return nil
 }
 
-func (p *Processor) Shutdown() {
+func (p *Processor) CloseRabbit() {
 	if err := p.RabbitChan.Close(); err != nil {
 		log.Println(errors.Wrapf(err, "Error closing rabbit channel during shutdown of %s processor", p.PubSubSubscription))
 	}

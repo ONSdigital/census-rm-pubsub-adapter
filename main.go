@@ -62,17 +62,17 @@ func main() {
 		defer shutdownCancel()
 
 		log.Printf("Rabbit Cleanup")
-		eqReceiptProcessor.Shutdown()
-		offlineReceiptProcessor.Shutdown()
-		ppoUndeliveredProcessor.Shutdown()
-		qmUndeliveredProcessor.Shutdown()
+		eqReceiptProcessor.CloseRabbit()
+		offlineReceiptProcessor.CloseRabbit()
+		ppoUndeliveredProcessor.CloseRabbit()
+		qmUndeliveredProcessor.CloseRabbit()
 
 	}()
 
 	//block until shutdown cancel has been called
 	<-shutdownCtx.Done()
 
-	log.Printf("Shutdown complete")
+	log.Printf("CloseRabbit complete")
 	os.Exit(1)
 
 }
