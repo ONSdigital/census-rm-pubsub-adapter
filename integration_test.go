@@ -47,7 +47,7 @@ func TestEqReceipt(t *testing.T) {
 	expectedRabbitMessage := `{"event":{"type":"RESPONSE_RECEIVED","source":"RECEIPT_SERVICE","channel":"EQ","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"response":{"questionnaireId":"01213213213","unreceipt":false}}}`
 
 	eqReceiptProcessor := processor.NewEqReceiptProcessor(ctx, cfg)
-	rabbitConn, err := amqp.Dial("amqp://guest:guest@localhost:7672/")
+	rabbitConn, err := amqp.Dial(cfg.RabbitConnectionString)
 	if err != nil {
 		t.Errorf("Rabbit dial fail: %s", err)
 	}
@@ -103,7 +103,7 @@ func TestOfflineReceipt(t *testing.T) {
 	expectedRabbitMessage := `{"event":{"type":"RESPONSE_RECEIVED","source":"RECEIPT_SERVICE","channel":"INTEGRATION_TEST","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"response":{"questionnaireId":"01213213213","unreceipt":false}}}`
 
 	offlineReceiptProcessor := processor.NewOfflineReceiptProcessor(ctx, cfg)
-	rabbitConn, err := amqp.Dial("amqp://guest:guest@localhost:7672/")
+	rabbitConn, err := amqp.Dial(cfg.RabbitConnectionString)
 	if err != nil {
 		t.Errorf("Rabbit dial fail: %s", err)
 	}
@@ -159,7 +159,7 @@ func TestPpoUndelivered(t *testing.T) {
 	expectedRabbitMessage := `{"event":{"type":"UNDELIVERED_MAIL_REPORTED","source":"RECEIPT_SERVICE","channel":"PPO","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"fulfilmentInformation":{"caseRef":"0123456789","fulfilmentCode":"P_TEST_1"}}}`
 
 	ppoUndeliveredProcessor := processor.NewPpoUndeliveredProcessor(ctx, cfg)
-	rabbitConn, err := amqp.Dial("amqp://guest:guest@localhost:7672/")
+	rabbitConn, err := amqp.Dial(cfg.RabbitConnectionString)
 	if err != nil {
 		t.Errorf("Rabbit dial fail: %s", err)
 	}
@@ -215,7 +215,7 @@ func TestQmUndelivered(t *testing.T) {
 	expectedRabbitMessage := `{"event":{"type":"UNDELIVERED_MAIL_REPORTED","source":"RECEIPT_SERVICE","channel":"QM","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"fulfilmentInformation":{"questionnaireId":"01213213213"}}}`
 
 	qmUndeliveredProcessor := processor.NewQmUndeliveredProcessor(ctx, cfg)
-	rabbitConn, err := amqp.Dial("amqp://guest:guest@localhost:7672/")
+	rabbitConn, err := amqp.Dial(cfg.RabbitConnectionString)
 	if err != nil {
 		t.Errorf("Rabbit dial fail: %s", err)
 	}
