@@ -21,8 +21,7 @@ func NewPpoUndeliveredProcessor(ctx context.Context, appConfig *config.Configura
 
 func unmarshalPpoUndelivered(data []byte) (models.PubSubMessage, error) {
 	var ppoUndelivered models.PpoUndelivered
-	err := json.Unmarshal(data, &ppoUndelivered)
-	if err != nil {
+	if err := json.Unmarshal(data, &ppoUndelivered); err != nil {
 		return nil, err
 	}
 	return ppoUndelivered, nil
@@ -39,7 +38,7 @@ func convertPpoUndeliveredToRmMessage(message models.PubSubMessage) (*models.RmM
 			Type:          "UNDELIVERED_MAIL_REPORTED",
 			Source:        "RECEIPT_SERVICE",
 			Channel:       "PPO",
-			DateTime:      ppoUndelivered.DateTime,
+			DateTime:      ppoUndelivered.DateTime.Time,
 			TransactionID: ppoUndelivered.TransactionId,
 		},
 		Payload: models.RmPayload{

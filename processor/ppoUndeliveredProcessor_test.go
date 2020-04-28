@@ -9,8 +9,9 @@ import (
 
 func TestConvertPpoUndeliveredToRmMessage(t *testing.T) {
 	timeCreated, _ := time.Parse("2006-07-08T03:04:05Z", "2008-08-24T00:00:00Z")
+	hazyTimeCreated := models.HazyUtcTime{Time: timeCreated}
 	ppoUndeliveredMessage := models.PpoUndelivered{
-		DateTime:      timeCreated,
+		DateTime:      hazyTimeCreated,
 		TransactionId: "abc123xxx",
 		CaseRef:       "123456789",
 		ProductCode:   "P_TEST_1",
