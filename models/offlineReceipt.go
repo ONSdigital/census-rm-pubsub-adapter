@@ -4,8 +4,8 @@ import "time"
 
 type OfflineReceipt struct {
 	TimeCreated     time.Time `json:"dateTime"`
-	TransactionId   string    `json:"tx_id"`
-	QuestionnaireId string    `json:"questionnaire_id"`
+	TransactionId   string    `json:"transactionId"`
+	QuestionnaireId string    `json:"questionnaireId"`
 	Unreceipt       bool      `json:"unreceipt"`
 	Channel         string    `json:"channel"`
 }

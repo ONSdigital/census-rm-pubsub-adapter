@@ -99,7 +99,7 @@ func TestEqReceipt(t *testing.T) {
 
 func TestOfflineReceipt(t *testing.T) {
 
-	eqReceiptMsg := `{"dateTime": "2008-08-24T00:00:00Z", "unreceipt" : false, "channel" : "INTEGRATION_TEST", "tx_id": "abc123xxx", "questionnaire_id": "01213213213"}`
+	eqReceiptMsg := `{"dateTime": "2008-08-24T00:00:00Z", "unreceipt" : false, "channel" : "INTEGRATION_TEST", "transactionId": "abc123xxx", "questionnaireId": "01213213213"}`
 	expectedRabbitMessage := `{"event":{"type":"RESPONSE_RECEIVED","source":"RECEIPT_SERVICE","channel":"INTEGRATION_TEST","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"response":{"questionnaireId":"01213213213","unreceipt":false}}}`
 
 	offlineReceiptProcessor := processor.NewOfflineReceiptProcessor(ctx, cfg)
