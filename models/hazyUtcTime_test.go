@@ -32,7 +32,7 @@ func testUnmarshalJSON(timeBuf []byte, expectedTime *time.Time) func(t *testing.
 		_, actualTzOffset := hazyUtcTime.Zone()
 		_, expectedTzOffset := expectedTime.Zone()
 		if actualTzOffset != expectedTzOffset {
-			t.Errorf("Expected UTC TZ, got: %d", actualTzOffset)
+			t.Errorf("Expected TZ offset: %d, got: %d", expectedTzOffset, actualTzOffset)
 		}
 	}
 }
