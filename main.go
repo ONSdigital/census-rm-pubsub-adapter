@@ -65,24 +65,24 @@ func StartProcessors(ctx context.Context, cfg *config.Configuration) []*processo
 	eqReceiptProcessor := processor.NewEqReceiptProcessor(ctx, cfg)
 	go eqReceiptProcessor.Consume(ctx)
 	go eqReceiptProcessor.Process(ctx)
-	processors = append(processors, eqReceiptProcessor.Processor)
+	processors = append(processors, eqReceiptProcessor)
 
 	// Start offline receipt processing
 	offlineReceiptProcessor := processor.NewOfflineReceiptProcessor(ctx, cfg)
 	go offlineReceiptProcessor.Consume(ctx)
 	go offlineReceiptProcessor.Process(ctx)
-	processors = append(processors, offlineReceiptProcessor.Processor)
+	processors = append(processors, offlineReceiptProcessor)
 
 	// Start PPO undelivered processing
 	ppoUndeliveredProcessor := processor.NewPpoUndeliveredProcessor(ctx, cfg)
 	go ppoUndeliveredProcessor.Consume(ctx)
 	go ppoUndeliveredProcessor.Process(ctx)
-	processors = append(processors, ppoUndeliveredProcessor.Processor)
+	processors = append(processors, ppoUndeliveredProcessor)
 
 	// Start QM undelivered processing
 	qmUndeliveredProcessor := processor.NewQmUndeliveredProcessor(ctx, cfg)
 	go qmUndeliveredProcessor.Consume(ctx)
 	go qmUndeliveredProcessor.Process(ctx)
-	processors = append(processors, qmUndeliveredProcessor.Processor)
+	processors = append(processors, qmUndeliveredProcessor)
 	return processors
 }

@@ -9,14 +9,8 @@ import (
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 )
 
-type qmUndeliveredProcessor struct {
-	*Processor
-}
-
-func NewQmUndeliveredProcessor(ctx context.Context, appConfig *config.Configuration) *qmUndeliveredProcessor {
-	qmUndeliveredProcessor := &qmUndeliveredProcessor{}
-	qmUndeliveredProcessor.Processor = NewProcessor(ctx, appConfig, appConfig.QmUndeliveredProject, appConfig.QmUndeliveredSubscription, appConfig.UndeliveredRoutingKey, convertQmUndeliveredToRmMessage, unmarshalQmUndelivered)
-	return qmUndeliveredProcessor
+func NewQmUndeliveredProcessor(ctx context.Context, appConfig *config.Configuration) *Processor {
+	return NewProcessor(ctx, appConfig, appConfig.QmUndeliveredProject, appConfig.QmUndeliveredSubscription, appConfig.UndeliveredRoutingKey, convertQmUndeliveredToRmMessage, unmarshalQmUndelivered)
 }
 
 func unmarshalQmUndelivered(data []byte) (models.PubSubMessage, error) {

@@ -9,14 +9,9 @@ import (
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 )
 
-type ppoUndeliveredProcessor struct {
-	*Processor
-}
 
-func NewPpoUndeliveredProcessor(ctx context.Context, appConfig *config.Configuration) *ppoUndeliveredProcessor {
-	ppoUndeliveredProcessor := &ppoUndeliveredProcessor{}
-	ppoUndeliveredProcessor.Processor = NewProcessor(ctx, appConfig, appConfig.PpoUndeliveredProject, appConfig.PpoUndeliveredSubscription, appConfig.UndeliveredRoutingKey, convertPpoUndeliveredToRmMessage, unmarshalPpoUndelivered)
-	return ppoUndeliveredProcessor
+func NewPpoUndeliveredProcessor(ctx context.Context, appConfig *config.Configuration) *Processor {
+	return NewProcessor(ctx, appConfig, appConfig.PpoUndeliveredProject, appConfig.PpoUndeliveredSubscription, appConfig.UndeliveredRoutingKey, convertPpoUndeliveredToRmMessage, unmarshalPpoUndelivered)
 }
 
 func unmarshalPpoUndelivered(data []byte) (models.PubSubMessage, error) {
