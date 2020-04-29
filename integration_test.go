@@ -176,7 +176,7 @@ func TestQmUndelivered(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
-	// Whene
+	// When
 	if messageId, err := publishMessageToPubSub(ctx, qmUndeliveredMsg, cfg.QmUndeliveredTopic, cfg.QmUndeliveredProject); err != nil {
 		t.Errorf("pubsub publish fail, project: %s, topic: %s, id: %s, error: %s", cfg.QmUndeliveredProject, cfg.QmUndeliveredTopic, messageId, err)
 		return

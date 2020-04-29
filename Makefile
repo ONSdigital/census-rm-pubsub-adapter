@@ -1,9 +1,9 @@
 up:
-	docker-compose up -d;
+	docker-compose up -d
 	./setup_dependencies.sh
 
 up-dependencies:
-	docker-compose up -d rabbitmq pubsub-emulator;
+	docker-compose up -d rabbitmq pubsub-emulator
 	./setup_dependencies.sh
 
 down:
