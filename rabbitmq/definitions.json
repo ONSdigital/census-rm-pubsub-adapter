@@ -25,11 +25,24 @@
   "parameters": [],
   "global_parameters": [],
   "policies": [],
-  "queues":[
+  "queues": [
     {
-      "name":"goTestQueue",
-      "vhost":"/",
-      "durable":true,
-      "auto_delete":false,
-      "arguments":{"x-queue-type":"classic"}}]
+      "name": "goTestReceiptQueue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "classic"
+      }
+    },
+    {
+      "name": "goTestUndeliveredQueue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "classic"
+      }
+    }
+  ]
 }

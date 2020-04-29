@@ -23,9 +23,25 @@ func main() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
 
-	eqReceiptProcessor := processor.New(ctx, appConfig)
+	// Start EQ receipt processing
+	eqReceiptProcessor := processor.NewEqReceiptProcessor(ctx, appConfig)
 	go eqReceiptProcessor.Consume(ctx)
 	go eqReceiptProcessor.Process(ctx)
+
+	// Start offline receipt processing
+	offlineReceiptProcessor := processor.NewOfflineReceiptProcessor(ctx, appConfig)
+	go offlineReceiptProcessor.Consume(ctx)
+	go offlineReceiptProcessor.Process(ctx)
+
+	// Start PPO undelivered processing
+	ppoUndeliveredProcessor := processor.NewPpoUndeliveredProcessor(ctx, appConfig)
+	go ppoUndeliveredProcessor.Consume(ctx)
+	go ppoUndeliveredProcessor.Process(ctx)
+
+	// Start QM undelivered processing
+	qmUndeliveredProcessor := processor.NewQmUndeliveredProcessor(ctx, appConfig)
+	go qmUndeliveredProcessor.Consume(ctx)
+	go qmUndeliveredProcessor.Process(ctx)
 
 	// block until we receive eqReceiptProcessor shutdown signal
 	select {
@@ -44,22 +60,19 @@ func main() {
 		cancel()
 		//defer shutdownCancel - this will be called once all things are close or when the timeout is reached
 		defer shutdownCancel()
+
 		log.Printf("Rabbit Cleanup")
-		err = eqReceiptProcessor.RabbitChan.Close()
-		if err != nil {
-			log.Println(errors.Wrap(err, "Error closing rabbit channel during shutdown"))
-		}
-		err = eqReceiptProcessor.RabbitConn.Close()
-		if err != nil {
-			log.Println(errors.Wrap(err, "Error closing rabbit connection during shutdown"))
-		}
+		eqReceiptProcessor.CloseRabbit()
+		offlineReceiptProcessor.CloseRabbit()
+		ppoUndeliveredProcessor.CloseRabbit()
+		qmUndeliveredProcessor.CloseRabbit()
 
 	}()
 
 	//block until shutdown cancel has been called
 	<-shutdownCtx.Done()
 
-	log.Printf("Shutdown complete")
+	log.Printf("CloseRabbit complete")
 	os.Exit(1)
 
 }

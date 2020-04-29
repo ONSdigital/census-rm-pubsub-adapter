@@ -32,5 +32,5 @@ services:
       - RABBIT_PORT=5672
       - RABBIT_VHOST=/
       - EQ_RECEIPT_PROJECT=project
-      - EQ_RECEIPT_SUBSCRIPTION=rm-receipt-subscription
+      - OFFLINE_RECEIPT_PROJECT=offline-project
     restart: on-failure

@@ -7,14 +7,30 @@ import (
 )
 
 type Configuration struct {
+	// Rabbit
 	RabbitHost             string `envconfig:"RABBIT_HOST" required:"true"`
 	RabbitPort             string `envconfig:"RABBIT_PORT" required:"true"`
 	RabbitUsername         string `envconfig:"RABBIT_USERNAME" required:"true"`
 	RabbitPassword         string `envconfig:"RABBIT_PASSWORD"  required:"true"  json:"-"`
 	RabbitVHost            string `envconfig:"RABBIT_VHOST"  default:"/"`
 	RabbitConnectionString string `json:"-"`
-	EqReceiptProject       string `envconfig:"EQ_RECEIPT_PROJECT" required:"true"`
-	EqReceiptSubscription  string `envconfig:"EQ_RECEIPT_SUBSCRIPTION" default:"rm-receipt-subscription"`
+	EventsExchange         string `envconfig:"RABBIT_EXCHANGE"  default:"events"`
+	ReceiptRoutingKey      string `envconfig:"RECEIPT_ROUTING_KEY"  default:"event.response.receipt"`
+	UndeliveredRoutingKey  string `envconfig:"UNDELIVERED_ROUTING_KEY"  default:"event.fulfilment.undelivered"`
+
+	// PubSub
+	EqReceiptProject           string `envconfig:"EQ_RECEIPT_PROJECT" required:"true"`
+	EqReceiptSubscription      string `envconfig:"EQ_RECEIPT_SUBSCRIPTION" default:"rm-receipt-subscription"`
+	EqReceiptTopic             string `envconfig:"EQ_RECEIPT_TOPIC" default:"eq-submission-topic"`
+	OfflineReceiptProject      string `envconfig:"OFFLINE_RECEIPT_PROJECT" required:"true"`
+	OfflineReceiptSubscription string `envconfig:"OFFLINE_RECEIPT_SUBSCRIPTION" default:"rm-offline-receipt-subscription"`
+	OfflineReceiptTopic        string `envconfig:"OFFLINE_RECEIPT_TOPIC" default:"offline-receipt-topic"`
+	PpoUndeliveredProject      string `envconfig:"PPO_UNDELIVERED_SUBSCRIPTION_PROJECT_ID" required:"true"`
+	PpoUndeliveredSubscription string `envconfig:"PPO_UNDELIVERED_SUBSCRIPTION_NAME" default:"rm-ppo-undelivered-subscription"`
+	PpoUndeliveredTopic        string `envconfig:"PPO_UNDELIVERED_TOPIC_NAME" default:"ppo-undelivered-topic"`
+	QmUndeliveredProject       string `envconfig:"QM_UNDELIVERED_SUBSCRIPTION_PROJECT_ID" required:"true"`
+	QmUndeliveredSubscription  string `envconfig:"QM_UNDELIVERED_SUBSCRIPTION_NAME" default:"rm-qm-undelivered-subscription"`
+	QmUndeliveredTopic         string `envconfig:"QM_UNDELIVERED_TOPIC_NAME" default:"qm-undelivered-topic"`
 }
 
 var cfg *Configuration
