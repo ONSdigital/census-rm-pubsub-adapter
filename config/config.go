@@ -25,12 +25,12 @@ type Configuration struct {
 	OfflineReceiptProject      string `envconfig:"OFFLINE_RECEIPT_PROJECT" required:"true"`
 	OfflineReceiptSubscription string `envconfig:"OFFLINE_RECEIPT_SUBSCRIPTION" default:"rm-offline-receipt-subscription"`
 	OfflineReceiptTopic        string `envconfig:"OFFLINE_RECEIPT_TOPIC" default:"offline-receipt-topic"`
-	PpoUndeliveredProject      string `envconfig:"PPO_UNDELIVERED_SUBSCRIPTION_PROJECT_ID" required:"true"`
-	PpoUndeliveredSubscription string `envconfig:"PPO_UNDELIVERED_SUBSCRIPTION_NAME" default:"rm-ppo-undelivered-subscription"`
-	PpoUndeliveredTopic        string `envconfig:"PPO_UNDELIVERED_TOPIC_NAME" default:"ppo-undelivered-topic"`
-	QmUndeliveredProject       string `envconfig:"QM_UNDELIVERED_SUBSCRIPTION_PROJECT_ID" required:"true"`
-	QmUndeliveredSubscription  string `envconfig:"QM_UNDELIVERED_SUBSCRIPTION_NAME" default:"rm-qm-undelivered-subscription"`
-	QmUndeliveredTopic         string `envconfig:"QM_UNDELIVERED_TOPIC_NAME" default:"qm-undelivered-topic"`
+	PpoUndeliveredProject      string `envconfig:"PPO_UNDELIVERED_SUBSCRIPTION_PROJECT" required:"true"`
+	PpoUndeliveredSubscription string `envconfig:"PPO_UNDELIVERED_SUBSCRIPTION" default:"rm-ppo-undelivered-subscription"`
+	PpoUndeliveredTopic        string `envconfig:"PPO_UNDELIVERED_TOPIC" default:"ppo-undelivered-topic"`
+	QmUndeliveredProject       string `envconfig:"QM_UNDELIVERED_SUBSCRIPTION_PROJECT" required:"true"`
+	QmUndeliveredSubscription  string `envconfig:"QM_UNDELIVERED_SUBSCRIPTION" default:"rm-qm-undelivered-subscription"`
+	QmUndeliveredTopic         string `envconfig:"QM_UNDELIVERED_TOPIC" default:"qm-undelivered-topic"`
 }
 
 var cfg *Configuration

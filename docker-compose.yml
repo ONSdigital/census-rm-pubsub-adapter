@@ -22,7 +22,7 @@ services:
 
   pubsub-adapter:
     container_name: pubsub-adapter-dev
-    image: eu.gcr.io/census-rm-ci/census-rm-pubsub-adapter
+    image: eu.gcr.io/census-rm-ci/rm/census-rm-pubsub-adapter
     environment:
       - PUBSUB_EMULATOR_HOST=pubsub-emulator-pubsub-adapter-dev:8539
       - RABBIT_CONNECTION=amqp://guest:guest@rabbitmq-pubsub-adapter-dev:5672/
@@ -33,4 +33,6 @@ services:
       - RABBIT_VHOST=/
       - EQ_RECEIPT_PROJECT=project
       - OFFLINE_RECEIPT_PROJECT=offline-project
+      - QM_UNDELIVERED_SUBSCRIPTION_PROJECT=qm-undelivered-project
+      - PPO_UNDELIVERED_SUBSCRIPTION_PROJECT=ppo-undelivered-project
     restart: on-failure

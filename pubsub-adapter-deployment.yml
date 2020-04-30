@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pubsub-adapter
+  labels:
+    app: pubsub-adapter
+    env: dev
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: pubsub-adapter
+  template:
+    metadata:
+      name: pubsub-adapter
+      labels:
+        app: pubsub-adapter
+        env: dev
+        version: "0.1.0dev"
+    spec:
+      containers:
+        - name: pubsub-adapter
+          image: eu.gcr.io/census-rm-ci/rm/census-rm-pubsub-adapter:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              memory: "128Mi"
+            limits:
+              memory: "256Mi"
+          volumeMounts:
+            - name: gcp-credentials-volume
+              mountPath: /gcp-credentials
+          env:
+            - name: EQ_RECEIPT_TOPIC
+              valueFrom:
+                configMapKeyRef:
+                  name: pubsub-config
+                  key: receipt-topic-name
+            #            - name: EQ_RECEIPT_TOPIC_PROJECT
+            #              valueFrom:
+            #                configMapKeyRef:
+            #                  name: pubsub-config
+            #                  key: receipt-topic-project-id
+            - name: EQ_RECEIPT_SUBSCRIPTION
+              valueFrom:
+                configMapKeyRef:
+                  name: pubsub-config
+                  key: subscription-name
+            - name: EQ_RECEIPT_PROJECT
+              valueFrom:
+                configMapKeyRef:
+                  name: pubsub-config
+                  key: subscription-project-id
+            - name: OFFLINE_RECEIPT_TOPIC_NAME
+              value: "offline-receipt-topic"
+#            - name: OFFLINE_RECEIPT_TOPIC_PROJECT_ID
+#              valueFrom:
+#                configMapKeyRef:
+#                  name: project-config
+#                  key: project-name
+            - name: OFFLINE_SUBSCRIPTION_NAME
+              value: "rm-offline-receipt-subscription"
+            - name: OFFLINE_RECEIPT_PROJECT
+              valueFrom:
+                configMapKeyRef:
+                  name: project-config
+                  key: project-name
+            - name: PPO_UNDELIVERED_SUBSCRIPTION_NAME
+              value: "rm-ppo-undelivered-subscription"
+            - name: PPO_UNDELIVERED_SUBSCRIPTION_PROJECT
+              valueFrom:
+                configMapKeyRef:
+                  name: project-config
+                  key: project-name
+            - name: QM_UNDELIVERED_SUBSCRIPTION_NAME
+              value: "rm-qm-undelivered-subscription"
+            - name: QM_UNDELIVERED_SUBSCRIPTION_PROJECT
+              valueFrom:
+                configMapKeyRef:
+                  name: project-config
+                  key: project-name
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: "/gcp-credentials/service-account-key.json"
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: RABBIT_HOST
+              value: "rabbitmq"
+            - name: RABBIT_PORT
+              value: "5672"
+            - name: RABBIT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq
+                  key: rabbitmq-username
+            - name: RABBIT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq
+                  key: rabbitmq-password
+      volumes:
+        - name: gcp-credentials-volume
+          secret:
+            secretName: pubsub-credentials
