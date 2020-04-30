@@ -28,7 +28,7 @@ unit-test:
 	go test -race ./... -tags=unitTest
 
 run-int-test:
-	PUBSUB_EMULATOR_HOST=localhost:8539 go test *.go
+	PUBSUB_EMULATOR_HOST=localhost:8539 go test github.com/ONSdigital/census-rm-pubsub-adapter
 
 int-test: down up-dependencies run-int-test down
 

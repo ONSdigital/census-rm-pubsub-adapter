@@ -9,8 +9,9 @@ import (
 
 func TestConvertQmUndeliveredToRmMessage(t *testing.T) {
 	timeCreated, _ := time.Parse("2006-07-08T03:04:05Z", "2008-08-24T00:00:00Z")
+	hazyTimeCreated := models.HazyUtcTime{Time: timeCreated}
 	qmUndeliveredMessage := models.QmUndelivered{
-		DateTime:        timeCreated,
+		DateTime:        hazyTimeCreated,
 		TransactionId:   "abc123xxx",
 		QuestionnaireId: "01213213213",
 	}

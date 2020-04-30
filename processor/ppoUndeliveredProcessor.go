@@ -9,20 +9,13 @@ import (
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 )
 
-type ppoUndeliveredProcessor struct {
-	*Processor
-}
-
-func NewPpoUndeliveredProcessor(ctx context.Context, appConfig *config.Configuration) *ppoUndeliveredProcessor {
-	ppoUndeliveredProcessor := &ppoUndeliveredProcessor{}
-	ppoUndeliveredProcessor.Processor = NewProcessor(ctx, appConfig, appConfig.PpoUndeliveredProject, appConfig.PpoUndeliveredSubscription, appConfig.UndeliveredRoutingKey, convertPpoUndeliveredToRmMessage, unmarshalPpoUndelivered)
-	return ppoUndeliveredProcessor
+func NewPpoUndeliveredProcessor(ctx context.Context, appConfig *config.Configuration) *Processor {
+	return NewProcessor(ctx, appConfig, appConfig.PpoUndeliveredProject, appConfig.PpoUndeliveredSubscription, appConfig.UndeliveredRoutingKey, convertPpoUndeliveredToRmMessage, unmarshalPpoUndelivered)
 }
 
 func unmarshalPpoUndelivered(data []byte) (models.PubSubMessage, error) {
 	var ppoUndelivered models.PpoUndelivered
-	err := json.Unmarshal(data, &ppoUndelivered)
-	if err != nil {
+	if err := json.Unmarshal(data, &ppoUndelivered); err != nil {
 		return nil, err
 	}
 	return ppoUndelivered, nil
@@ -39,7 +32,7 @@ func convertPpoUndeliveredToRmMessage(message models.PubSubMessage) (*models.RmM
 			Type:          "UNDELIVERED_MAIL_REPORTED",
 			Source:        "RECEIPT_SERVICE",
 			Channel:       "PPO",
-			DateTime:      ppoUndelivered.DateTime,
+			DateTime:      ppoUndelivered.DateTime.Time,
 			TransactionID: ppoUndelivered.TransactionId,
 		},
 		Payload: models.RmPayload{

@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
-	"github.com/ONSdigital/census-rm-pubsub-adapter/processor"
 	"github.com/streadway/amqp"
 	"os"
 	"testing"
@@ -47,7 +46,7 @@ func TestEqReceipt(t *testing.T) {
 	eqReceiptMsg := `{"timeCreated": "2008-08-24T00:00:00Z", "metadata": {"tx_id": "abc123xxx", "questionnaire_id": "01213213213"}}`
 	expectedRabbitMessage := `{"event":{"type":"RESPONSE_RECEIVED","source":"RECEIPT_SERVICE","channel":"EQ","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"response":{"questionnaireId":"01213213213","unreceipt":false}}}`
 
-	eqReceiptProcessor := processor.NewEqReceiptProcessor(ctx, cfg)
+	_ = StartProcessors(ctx, cfg)
 
 	rabbitConn, rabbitChan, err := connectToRabbitChannel()
 	defer rabbitConn.Close()
@@ -64,9 +63,6 @@ func TestEqReceipt(t *testing.T) {
 		t.Errorf("PubSub publish fail, project: %s, topic: %s, id: %s, error: %s", cfg.EqReceiptProject, cfg.EqReceiptTopic, messageId, err)
 		return
 	}
-
-	go eqReceiptProcessor.Consume(ctx)
-	go eqReceiptProcessor.Process(ctx)
 
 	rabbitMessage, err := getFirstMessageOnQueue(ctx, cfg.ReceiptRoutingKey, rabbitChan)
 	if err != nil {
@@ -86,7 +82,7 @@ func TestOfflineReceipt(t *testing.T) {
 	offlineReceiptMsg := `{"dateTime": "2008-08-24T00:00:00Z", "unreceipt" : false, "channel" : "INTEGRATION_TEST", "transactionId": "abc123xxx", "questionnaireId": "01213213213"}`
 	expectedRabbitMessage := `{"event":{"type":"RESPONSE_RECEIVED","source":"RECEIPT_SERVICE","channel":"INTEGRATION_TEST","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"response":{"questionnaireId":"01213213213","unreceipt":false}}}`
 
-	offlineReceiptProcessor := processor.NewOfflineReceiptProcessor(ctx, cfg)
+	_ = StartProcessors(ctx, cfg)
 
 	rabbitConn, rabbitChan, err := connectToRabbitChannel()
 	defer rabbitConn.Close()
@@ -103,9 +99,6 @@ func TestOfflineReceipt(t *testing.T) {
 		t.Errorf("pubsub publish fail, project: %s, topic: %s, id: %s, error: %s", cfg.OfflineReceiptProject, cfg.OfflineReceiptTopic, messageId, err)
 		return
 	}
-
-	go offlineReceiptProcessor.Consume(ctx)
-	go offlineReceiptProcessor.Process(ctx)
 
 	rabbitMessage, err := getFirstMessageOnQueue(ctx, cfg.ReceiptRoutingKey, rabbitChan)
 	if err != nil {
@@ -125,7 +118,7 @@ func TestPpoUndelivered(t *testing.T) {
 	ppoUndeliveredMsg := `{"dateTime": "2008-08-24T00:00:00Z", "transactionId": "abc123xxx", "caseRef": "0123456789", "productCode": "P_TEST_1"}`
 	expectedRabbitMessage := `{"event":{"type":"UNDELIVERED_MAIL_REPORTED","source":"RECEIPT_SERVICE","channel":"PPO","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"fulfilmentInformation":{"caseRef":"0123456789","fulfilmentCode":"P_TEST_1"}}}`
 
-	ppoUndeliveredProcessor := processor.NewPpoUndeliveredProcessor(ctx, cfg)
+	_ = StartProcessors(ctx, cfg)
 
 	rabbitConn, rabbitChan, err := connectToRabbitChannel()
 	defer rabbitConn.Close()
@@ -142,9 +135,6 @@ func TestPpoUndelivered(t *testing.T) {
 		t.Errorf("pubsub publish fail, project: %s, topic: %s, id: %s, error: %s", cfg.PpoUndeliveredProject, cfg.PpoUndeliveredTopic, messageId, err)
 		return
 	}
-
-	go ppoUndeliveredProcessor.Consume(ctx)
-	go ppoUndeliveredProcessor.Process(ctx)
 
 	rabbitMessage, err := getFirstMessageOnQueue(ctx, cfg.UndeliveredRoutingKey, rabbitChan)
 	if err != nil {
@@ -164,7 +154,7 @@ func TestQmUndelivered(t *testing.T) {
 	qmUndeliveredMsg := `{"dateTime": "2008-08-24T00:00:00Z", "transactionId": "abc123xxx", "questionnaireId": "01213213213"}`
 	expectedRabbitMessage := `{"event":{"type":"UNDELIVERED_MAIL_REPORTED","source":"RECEIPT_SERVICE","channel":"QM","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"fulfilmentInformation":{"questionnaireId":"01213213213"}}}`
 
-	qmUndeliveredProcessor := processor.NewQmUndeliveredProcessor(ctx, cfg)
+	_ = StartProcessors(ctx, cfg)
 
 	rabbitConn, rabbitChan, err := connectToRabbitChannel()
 	defer rabbitConn.Close()
@@ -182,9 +172,6 @@ func TestQmUndelivered(t *testing.T) {
 		return
 	}
 
-	go qmUndeliveredProcessor.Consume(ctx)
-	go qmUndeliveredProcessor.Process(ctx)
-
 	rabbitMessage, err := getFirstMessageOnQueue(ctx, cfg.UndeliveredRoutingKey, rabbitChan)
 	if err != nil {
 		t.Error(err)
@@ -196,6 +183,14 @@ func TestQmUndelivered(t *testing.T) {
 		t.Errorf("Rabbit messsage incorrect - \nexpected: %s \nactual: %s", expectedRabbitMessage, rabbitMessage)
 	}
 	cancel()
+}
+
+func TestStartProcessors(t *testing.T) {
+	processors := StartProcessors(ctx, cfg)
+
+	if len(processors) != 4 {
+		t.Errorf("StartProcessors should return 4 processors, actually returned %d", len(processors))
+	}
 }
 
 func publishMessageToPubSub(ctx context.Context, msg string, topic string, project string) (id string, err error) {

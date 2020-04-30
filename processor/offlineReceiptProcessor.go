@@ -9,14 +9,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-type OfflineReceiptProcessor struct {
-	*Processor
-}
-
-func NewOfflineReceiptProcessor(ctx context.Context, appConfig *config.Configuration) *OfflineReceiptProcessor {
-	offlineReceiptProcessor := &OfflineReceiptProcessor{}
-	offlineReceiptProcessor.Processor = NewProcessor(ctx, appConfig, appConfig.OfflineReceiptProject, appConfig.OfflineReceiptSubscription, appConfig.ReceiptRoutingKey, convertOfflineReceiptToRmMessage, unmarshalOfflineReceipt)
-	return offlineReceiptProcessor
+func NewOfflineReceiptProcessor(ctx context.Context, appConfig *config.Configuration) *Processor {
+	return NewProcessor(ctx, appConfig, appConfig.OfflineReceiptProject, appConfig.OfflineReceiptSubscription, appConfig.ReceiptRoutingKey, convertOfflineReceiptToRmMessage, unmarshalOfflineReceipt)
 }
 
 func unmarshalOfflineReceipt(data []byte) (models.PubSubMessage, error) {
@@ -38,7 +32,7 @@ func convertOfflineReceiptToRmMessage(receipt models.PubSubMessage) (*models.RmM
 			Type:          "RESPONSE_RECEIVED",
 			Source:        "RECEIPT_SERVICE",
 			Channel:       offlineReceipt.Channel,
-			DateTime:      offlineReceipt.TimeCreated,
+			DateTime:      offlineReceipt.TimeCreated.Time,
 			TransactionID: offlineReceipt.TransactionId,
 		},
 		Payload: models.RmPayload{

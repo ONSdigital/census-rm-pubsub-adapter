@@ -9,14 +9,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-type EqReceiptProcessor struct {
-	*Processor
-}
-
-func NewEqReceiptProcessor(ctx context.Context, appConfig *config.Configuration) *EqReceiptProcessor {
-	eqReceiptProcessor := &EqReceiptProcessor{}
-	eqReceiptProcessor.Processor = NewProcessor(ctx, appConfig, appConfig.EqReceiptProject, appConfig.EqReceiptSubscription, appConfig.ReceiptRoutingKey, convertEqReceiptToRmMessage, unmarshalEqReceipt)
-	return eqReceiptProcessor
+func NewEqReceiptProcessor(ctx context.Context, appConfig *config.Configuration) *Processor {
+	return NewProcessor(ctx, appConfig, appConfig.EqReceiptProject, appConfig.EqReceiptSubscription, appConfig.ReceiptRoutingKey, convertEqReceiptToRmMessage, unmarshalEqReceipt)
 }
 
 func unmarshalEqReceipt(data []byte) (models.PubSubMessage, error) {

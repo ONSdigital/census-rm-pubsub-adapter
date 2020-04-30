@@ -23,25 +23,7 @@ func main() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
 
-	// Start EQ receipt processing
-	eqReceiptProcessor := processor.NewEqReceiptProcessor(ctx, appConfig)
-	go eqReceiptProcessor.Consume(ctx)
-	go eqReceiptProcessor.Process(ctx)
-
-	// Start offline receipt processing
-	offlineReceiptProcessor := processor.NewOfflineReceiptProcessor(ctx, appConfig)
-	go offlineReceiptProcessor.Consume(ctx)
-	go offlineReceiptProcessor.Process(ctx)
-
-	// Start PPO undelivered processing
-	ppoUndeliveredProcessor := processor.NewPpoUndeliveredProcessor(ctx, appConfig)
-	go ppoUndeliveredProcessor.Consume(ctx)
-	go ppoUndeliveredProcessor.Process(ctx)
-
-	// Start QM undelivered processing
-	qmUndeliveredProcessor := processor.NewQmUndeliveredProcessor(ctx, appConfig)
-	go qmUndeliveredProcessor.Consume(ctx)
-	go qmUndeliveredProcessor.Process(ctx)
+	processors := StartProcessors(ctx, appConfig)
 
 	// block until we receive eqReceiptProcessor shutdown signal
 	select {
@@ -62,10 +44,9 @@ func main() {
 		defer shutdownCancel()
 
 		log.Printf("Rabbit Cleanup")
-		eqReceiptProcessor.CloseRabbit()
-		offlineReceiptProcessor.CloseRabbit()
-		ppoUndeliveredProcessor.CloseRabbit()
-		qmUndeliveredProcessor.CloseRabbit()
+		for _, p := range processors {
+			p.CloseRabbit()
+		}
 
 	}()
 
@@ -75,4 +56,33 @@ func main() {
 	log.Printf("CloseRabbit complete")
 	os.Exit(1)
 
+}
+
+func StartProcessors(ctx context.Context, cfg *config.Configuration) []*processor.Processor {
+	processors := make([]*processor.Processor, 0)
+
+	// Start EQ receipt processing
+	eqReceiptProcessor := processor.NewEqReceiptProcessor(ctx, cfg)
+	go eqReceiptProcessor.Consume(ctx)
+	go eqReceiptProcessor.Process(ctx)
+	processors = append(processors, eqReceiptProcessor)
+
+	// Start offline receipt processing
+	offlineReceiptProcessor := processor.NewOfflineReceiptProcessor(ctx, cfg)
+	go offlineReceiptProcessor.Consume(ctx)
+	go offlineReceiptProcessor.Process(ctx)
+	processors = append(processors, offlineReceiptProcessor)
+
+	// Start PPO undelivered processing
+	ppoUndeliveredProcessor := processor.NewPpoUndeliveredProcessor(ctx, cfg)
+	go ppoUndeliveredProcessor.Consume(ctx)
+	go ppoUndeliveredProcessor.Process(ctx)
+	processors = append(processors, ppoUndeliveredProcessor)
+
+	// Start QM undelivered processing
+	qmUndeliveredProcessor := processor.NewQmUndeliveredProcessor(ctx, cfg)
+	go qmUndeliveredProcessor.Consume(ctx)
+	go qmUndeliveredProcessor.Process(ctx)
+	processors = append(processors, qmUndeliveredProcessor)
+	return processors
 }
