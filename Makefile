@@ -10,7 +10,7 @@ down:
 	docker-compose down
 
 docker:
-	docker build -t eu.gcr.io/census-rm-ci/census-rm-pubsub-adapter .
+	docker build -t eu.gcr.io/census-rm-ci/rm/census-rm-pubsub-adapter .
 
 build:
 	go build -race .
