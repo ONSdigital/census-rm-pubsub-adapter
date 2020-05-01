@@ -29,9 +29,11 @@ spec:
           imagePullPolicy: Always
           resources:
             requests:
-              memory: "128Mi"
+              cpu: "0.2"
+              memory: "64Mi"
             limits:
-              memory: "256Mi"
+              cpu: "0.2"
+              memory: "64Mi"
           volumeMounts:
             - name: gcp-credentials-volume
               mountPath: /gcp-credentials
@@ -76,8 +78,6 @@ spec:
                   key: project-name
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: "/gcp-credentials/service-account-key.json"
-            - name: LOG_LEVEL
-              value: "INFO"
             - name: RABBIT_HOST
               value: "rabbitmq"
             - name: RABBIT_PORT
