@@ -33,7 +33,7 @@ func NewProcessor(ctx context.Context,
 	pubSubSubscription string,
 	routingKey string,
 	messageConverter messageConverter,
-	messageUnmarshaller messageUnmarshaller) *Processor {
+	messageUnmarshaller messageUnmarshaller) (*Processor, error) {
 	var err error
 	p := &Processor{}
 	p.Config = appConfig
@@ -41,22 +41,35 @@ func NewProcessor(ctx context.Context,
 	p.convertMessage = messageConverter
 	p.unmarshallMessage = messageUnmarshaller
 
-	//set up rabbit connection
+	// Set up rabbit connection
 	p.RabbitConn, err = amqp.Dial(appConfig.RabbitConnectionString)
-	failOnError(err, "Failed to connect to RabbitMQ")
+	if err != nil {
+		return nil, err
+	}
 
 	p.RabbitChan, err = p.RabbitConn.Channel()
-	failOnError(err, "Failed to open p channel")
+	if err != nil {
+		return nil, err
+	}
 
-	//setup pubsub connection
+	// Setup PubSub connection
 	p.PubSubClient, err = pubsub.NewClient(ctx, pubSubProject)
-	failOnError(err, "Pubsub client creation failed")
+	if err != nil {
+		return nil, err
+	}
 
-	//setup subscription
+	// Setup subscription
 	p.PubSubSubscription = p.PubSubClient.Subscription(pubSubSubscription)
 	p.MessageChan = make(chan pubsub.Message)
 
-	return p
+	// Start processing messages on the channel
+	go p.Process(ctx)
+
+	// Start consuming from PubSub
+	// TODO kill the app if consumer dies
+	go p.Consume(ctx)
+
+	return p, nil
 }
 
 func (p *Processor) Consume(ctx context.Context) {
@@ -68,7 +81,6 @@ func (p *Processor) Consume(ctx context.Context) {
 	})
 	if err != nil {
 		log.Printf("Receive: %v\n", err)
-		return
 	}
 }
 

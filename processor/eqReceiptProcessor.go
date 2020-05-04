@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func NewEqReceiptProcessor(ctx context.Context, appConfig *config.Configuration) *Processor {
+func NewEqReceiptProcessor(ctx context.Context, appConfig *config.Configuration) (*Processor, error) {
 	return NewProcessor(ctx, appConfig, appConfig.EqReceiptProject, appConfig.EqReceiptSubscription, appConfig.ReceiptRoutingKey, convertEqReceiptToRmMessage, unmarshalEqReceipt)
 }
 

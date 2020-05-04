@@ -46,7 +46,11 @@ func TestEqReceipt(t *testing.T) {
 	eqReceiptMsg := `{"timeCreated": "2008-08-24T00:00:00Z", "metadata": {"tx_id": "abc123xxx", "questionnaire_id": "01213213213"}}`
 	expectedRabbitMessage := `{"event":{"type":"RESPONSE_RECEIVED","source":"RECEIPT_SERVICE","channel":"EQ","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"response":{"questionnaireId":"01213213213","unreceipt":false}}}`
 
-	_ = StartProcessors(ctx, cfg)
+	if _, err := StartProcessors(ctx, cfg); err != nil {
+		t.Error(err)
+		return
+	}
+
 
 	rabbitConn, rabbitChan, err := connectToRabbitChannel()
 	defer rabbitConn.Close()
@@ -82,7 +86,10 @@ func TestOfflineReceipt(t *testing.T) {
 	offlineReceiptMsg := `{"dateTime": "2008-08-24T00:00:00Z", "unreceipt" : false, "channel" : "INTEGRATION_TEST", "transactionId": "abc123xxx", "questionnaireId": "01213213213"}`
 	expectedRabbitMessage := `{"event":{"type":"RESPONSE_RECEIVED","source":"RECEIPT_SERVICE","channel":"INTEGRATION_TEST","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"response":{"questionnaireId":"01213213213","unreceipt":false}}}`
 
-	_ = StartProcessors(ctx, cfg)
+	if _, err := StartProcessors(ctx, cfg); err != nil {
+		t.Error(err)
+		return
+	}
 
 	rabbitConn, rabbitChan, err := connectToRabbitChannel()
 	defer rabbitConn.Close()
@@ -118,7 +125,10 @@ func TestPpoUndelivered(t *testing.T) {
 	ppoUndeliveredMsg := `{"dateTime": "2008-08-24T00:00:00Z", "transactionId": "abc123xxx", "caseRef": "0123456789", "productCode": "P_TEST_1"}`
 	expectedRabbitMessage := `{"event":{"type":"UNDELIVERED_MAIL_REPORTED","source":"RECEIPT_SERVICE","channel":"PPO","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"fulfilmentInformation":{"caseRef":"0123456789","fulfilmentCode":"P_TEST_1"}}}`
 
-	_ = StartProcessors(ctx, cfg)
+	if _, err := StartProcessors(ctx, cfg); err != nil {
+		t.Error(err)
+		return
+	}
 
 	rabbitConn, rabbitChan, err := connectToRabbitChannel()
 	defer rabbitConn.Close()
@@ -154,7 +164,10 @@ func TestQmUndelivered(t *testing.T) {
 	qmUndeliveredMsg := `{"dateTime": "2008-08-24T00:00:00Z", "transactionId": "abc123xxx", "questionnaireId": "01213213213"}`
 	expectedRabbitMessage := `{"event":{"type":"UNDELIVERED_MAIL_REPORTED","source":"RECEIPT_SERVICE","channel":"QM","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"fulfilmentInformation":{"questionnaireId":"01213213213"}}}`
 
-	_ = StartProcessors(ctx, cfg)
+	if _, err := StartProcessors(ctx, cfg); err != nil {
+		t.Error(err)
+		return
+	}
 
 	rabbitConn, rabbitChan, err := connectToRabbitChannel()
 	defer rabbitConn.Close()
@@ -186,7 +199,11 @@ func TestQmUndelivered(t *testing.T) {
 }
 
 func TestStartProcessors(t *testing.T) {
-	processors := StartProcessors(ctx, cfg)
+	processors, err := StartProcessors(ctx, cfg)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	if len(processors) != 4 {
 		t.Errorf("StartProcessors should return 4 processors, actually returned %d", len(processors))

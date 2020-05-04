@@ -36,3 +36,9 @@ services:
       - QM_UNDELIVERED_SUBSCRIPTION_PROJECT=qm-undelivered-project
       - PPO_UNDELIVERED_SUBSCRIPTION_PROJECT=ppo-undelivered-project
     restart: on-failure
+    healthcheck:
+      test: ["CMD", "find", "/tmp/pubsub-adapter-ready", "-mmin", "-1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 1s

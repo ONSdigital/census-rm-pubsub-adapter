@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func NewOfflineReceiptProcessor(ctx context.Context, appConfig *config.Configuration) *Processor {
+func NewOfflineReceiptProcessor(ctx context.Context, appConfig *config.Configuration) (*Processor, error) {
 	return NewProcessor(ctx, appConfig, appConfig.OfflineReceiptProject, appConfig.OfflineReceiptSubscription, appConfig.ReceiptRoutingKey, convertOfflineReceiptToRmMessage, unmarshalOfflineReceipt)
 }
 

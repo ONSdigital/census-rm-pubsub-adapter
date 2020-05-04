@@ -9,7 +9,7 @@ import (
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 )
 
-func NewPpoUndeliveredProcessor(ctx context.Context, appConfig *config.Configuration) *Processor {
+func NewPpoUndeliveredProcessor(ctx context.Context, appConfig *config.Configuration) (*Processor, error) {
 	return NewProcessor(ctx, appConfig, appConfig.PpoUndeliveredProject, appConfig.PpoUndeliveredSubscription, appConfig.UndeliveredRoutingKey, convertPpoUndeliveredToRmMessage, unmarshalPpoUndelivered)
 }
 
