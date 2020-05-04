@@ -20,11 +20,11 @@ func main() {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 
-	// Trap SIGINT to trigger graceful shutdown.
+	// Trap SIGINT to trigger graceful shutdown
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
 
-	// Trap errChan to trigger graceful shutdown.
+	// Channel for goroutines to notify main of errors
 	errChan := make(chan error)
 
 	processors, err := StartProcessors(ctx, appConfig, errChan)
@@ -37,12 +37,12 @@ func main() {
 		shutdown(ctx, cancel, processors)
 	}
 
-	// block until we receive eqReceiptProcessor shutdown signal
+	// Block until we receive OS shutdown signal or error
 	select {
 	case sig := <-signals:
 		log.Printf("OS Signal Received: %s", sig.String())
 	case err := <-errChan:
-		log.Println(errors.Wrap(err, "Error Received"))
+		log.Println(errors.Wrap(err, "Error Received:"))
 	}
 
 	shutdown(ctx, cancel, processors)
@@ -79,20 +79,21 @@ func StartProcessors(ctx context.Context, cfg *config.Configuration, errChan cha
 		return nil, err
 	}
 	processors = append(processors, qmUndeliveredProcessor)
+
 	return processors, nil
 }
 
 func shutdown(ctx context.Context, cancel context.CancelFunc, processors []*processor.Processor) {
-	//cleanup for eqReceiptProcessor graceful shutdown
+	// cleanup for graceful shutdown
 	log.Printf("Shutting Down")
 
-	//give the app 10 sec to cleanup before being killed
+	// give the app 10 sec to cleanup before being killed
 	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 10*time.Second)
 
 	go func() {
-		//send cancel to all consumers
+		// send cancel to all consumers
 		cancel()
-		//defer shutdownCancel - this will be called once all things are close or when the timeout is reached
+		// this will be called once cleanup completes or when the timeout is reached
 		defer shutdownCancel()
 
 		log.Printf("Rabbit Cleanup")

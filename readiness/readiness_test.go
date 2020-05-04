@@ -49,7 +49,9 @@ func testReadinessFiles(t *testing.T) {
 	// Set a timeout for if the readiness file is not deleted
 	timeoutCtx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 
+	// Trigger the cancel which should result in the file being removed
 	cancel()
+
 	for {
 		// Check if readiness file has been removed
 		if _, err = os.Stat(readinessFilePath); err != nil {
@@ -59,6 +61,8 @@ func testReadinessFiles(t *testing.T) {
 			t.Error(err)
 			return
 		}
+
+		// Fail the test if it times out before the file is removed
 		select {
 		case <-timeoutCtx.Done():
 			t.Error("Test timed out waiting for file cleanup")
