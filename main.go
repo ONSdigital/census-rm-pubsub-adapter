@@ -20,11 +20,14 @@ func main() {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 
-	// Trap SIGINT to trigger eqReceiptProcessor graceful shutdown.
+	// Trap SIGINT to trigger graceful shutdown.
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
 
-	processors, err := StartProcessors(ctx, appConfig)
+	// Trap errChan to trigger graceful shutdown.
+	errChan := make(chan error)
+
+	processors, err := StartProcessors(ctx, appConfig, errChan)
 	if err != nil {
 		shutdown(ctx, cancel, processors)
 	}
@@ -33,44 +36,46 @@ func main() {
 	if err != nil {
 		shutdown(ctx, cancel, processors)
 	}
-	log.Println("Pubsub Adapter successfully started")
+	log.Println("PubSub Adapter successfully started")
 
 	// block until we receive eqReceiptProcessor shutdown signal
 	select {
 	case sig := <-signals:
 		log.Printf("OS Signal Received: %s", sig.String())
+	case err := <-errChan:
+		log.Println(errors.Wrap(err, "Error Received"))
 	}
 
 	shutdown(ctx, cancel, processors)
 
 }
 
-func StartProcessors(ctx context.Context, cfg *config.Configuration) ([]*processor.Processor, error) {
+func StartProcessors(ctx context.Context, cfg *config.Configuration, errChan chan error) ([]*processor.Processor, error) {
 	processors := make([]*processor.Processor, 0)
 
 	// Start EQ receipt processing
-	eqReceiptProcessor, err := processor.NewEqReceiptProcessor(ctx, cfg)
+	eqReceiptProcessor, err := processor.NewEqReceiptProcessor(ctx, cfg, errChan)
 	if err != nil {
 		return nil, err
 	}
 	processors = append(processors, eqReceiptProcessor)
 
 	// Start offline receipt processing
-	offlineReceiptProcessor, err := processor.NewOfflineReceiptProcessor(ctx, cfg)
+	offlineReceiptProcessor, err := processor.NewOfflineReceiptProcessor(ctx, cfg, errChan)
 	if err != nil {
 		return nil, err
 	}
 	processors = append(processors, offlineReceiptProcessor)
 
 	// Start PPO undelivered processing
-	ppoUndeliveredProcessor, err := processor.NewPpoUndeliveredProcessor(ctx, cfg)
+	ppoUndeliveredProcessor, err := processor.NewPpoUndeliveredProcessor(ctx, cfg, errChan)
 	if err != nil {
 		return nil, err
 	}
 	processors = append(processors, ppoUndeliveredProcessor)
 
 	// Start QM undelivered processing
-	qmUndeliveredProcessor, err := processor.NewQmUndeliveredProcessor(ctx, cfg)
+	qmUndeliveredProcessor, err := processor.NewQmUndeliveredProcessor(ctx, cfg, errChan)
 	if err != nil {
 		return nil, err
 	}

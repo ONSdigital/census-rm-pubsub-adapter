@@ -9,8 +9,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-func NewEqReceiptProcessor(ctx context.Context, appConfig *config.Configuration) (*Processor, error) {
-	return NewProcessor(ctx, appConfig, appConfig.EqReceiptProject, appConfig.EqReceiptSubscription, appConfig.ReceiptRoutingKey, convertEqReceiptToRmMessage, unmarshalEqReceipt)
+func NewEqReceiptProcessor(ctx context.Context, appConfig *config.Configuration, errChan chan error) (*Processor, error) {
+	return NewProcessor(ctx, appConfig, appConfig.EqReceiptProject, appConfig.EqReceiptSubscription, appConfig.ReceiptRoutingKey, convertEqReceiptToRmMessage, unmarshalEqReceipt, errChan)
 }
 
 func unmarshalEqReceipt(data []byte) (models.PubSubMessage, error) {
