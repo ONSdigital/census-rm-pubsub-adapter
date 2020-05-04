@@ -43,15 +43,6 @@ spec:
             periodSeconds: 2
             failureThreshold: 10
             successThreshold: 1
-          livenessProbe:
-            exec:
-              command:
-                - cat
-                - $(READINESS_FILE_PATH)
-            initialDelaySeconds: 1
-            periodSeconds: 10
-            failureThreshold: 3
-            successThreshold: 1
           volumeMounts:
             - name: gcp-credentials-volume
               mountPath: /gcp-credentials
