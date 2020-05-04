@@ -41,162 +41,63 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestEqReceipt(t *testing.T) {
-	// Given
-	eqReceiptMsg := `{"timeCreated": "2008-08-24T00:00:00Z", "metadata": {"tx_id": "abc123xxx", "questionnaire_id": "01213213213"}}`
-	expectedRabbitMessage := `{"event":{"type":"RESPONSE_RECEIVED","source":"RECEIPT_SERVICE","channel":"EQ","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"response":{"questionnaireId":"01213213213","unreceipt":false}}}`
+func TestMessageProcessing(t *testing.T) {
+	t.Run("Test EQ receipting", testMessageProcessing(
+		`{"timeCreated": "2008-08-24T00:00:00Z", "metadata": {"tx_id": "abc123xxx", "questionnaire_id": "01213213213"}}`,
+		`{"event":{"type":"RESPONSE_RECEIVED","source":"RECEIPT_SERVICE","channel":"EQ","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"response":{"questionnaireId":"01213213213","unreceipt":false}}}`,
+		cfg.EqReceiptTopic, cfg.EqReceiptProject, cfg.ReceiptRoutingKey))
 
-	if _, err := StartProcessors(ctx, cfg, make(chan error)); err != nil {
-		t.Error(err)
-		return
-	}
+	t.Run("Test Offline receipting", testMessageProcessing(
+		`{"dateTime": "2008-08-24T00:00:00Z", "unreceipt" : false, "channel" : "INTEGRATION_TEST", "transactionId": "abc123xxx", "questionnaireId": "01213213213"}`,
+		`{"event":{"type":"RESPONSE_RECEIVED","source":"RECEIPT_SERVICE","channel":"INTEGRATION_TEST","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"response":{"questionnaireId":"01213213213","unreceipt":false}}}`,
+		cfg.OfflineReceiptTopic, cfg.OfflineReceiptProject, cfg.ReceiptRoutingKey))
 
+	t.Run("Test PPO undelivered mail", testMessageProcessing(
+		`{"dateTime": "2008-08-24T00:00:00Z", "transactionId": "abc123xxx", "caseRef": "0123456789", "productCode": "P_TEST_1"}`,
+		`{"event":{"type":"UNDELIVERED_MAIL_REPORTED","source":"RECEIPT_SERVICE","channel":"PPO","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"fulfilmentInformation":{"caseRef":"0123456789","fulfilmentCode":"P_TEST_1"}}}`,
+		cfg.PpoUndeliveredTopic, cfg.PpoUndeliveredProject, cfg.UndeliveredRoutingKey))
 
-	rabbitConn, rabbitChan, err := connectToRabbitChannel()
-	defer rabbitConn.Close()
-	defer rabbitChan.Close()
-	if _, err := rabbitChan.QueuePurge(cfg.ReceiptRoutingKey, true); err != nil {
-		t.Error(err)
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-
-	// When
-	if messageId, err := publishMessageToPubSub(ctx, eqReceiptMsg, cfg.EqReceiptTopic, cfg.EqReceiptProject); err != nil {
-		t.Errorf("PubSub publish fail, project: %s, topic: %s, id: %s, error: %s", cfg.EqReceiptProject, cfg.EqReceiptTopic, messageId, err)
-		return
-	}
-
-	rabbitMessage, err := getFirstMessageOnQueue(ctx, cfg.ReceiptRoutingKey, rabbitChan)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	// Then
-	if rabbitMessage != expectedRabbitMessage {
-		t.Errorf("Rabbit messsage incorrect - \nexpected: %s \nactual: %s", expectedRabbitMessage, rabbitMessage)
-	}
-	cancel()
+	t.Run("Test QM undelivered mail", testMessageProcessing(
+		`{"dateTime": "2008-08-24T00:00:00Z", "transactionId": "abc123xxx", "questionnaireId": "01213213213"}`,
+		`{"event":{"type":"UNDELIVERED_MAIL_REPORTED","source":"RECEIPT_SERVICE","channel":"QM","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"fulfilmentInformation":{"questionnaireId":"01213213213"}}}`,
+		cfg.QmUndeliveredTopic, cfg.QmUndeliveredProject, cfg.UndeliveredRoutingKey))
 }
 
-func TestOfflineReceipt(t *testing.T) {
-	// Given
-	offlineReceiptMsg := `{"dateTime": "2008-08-24T00:00:00Z", "unreceipt" : false, "channel" : "INTEGRATION_TEST", "transactionId": "abc123xxx", "questionnaireId": "01213213213"}`
-	expectedRabbitMessage := `{"event":{"type":"RESPONSE_RECEIVED","source":"RECEIPT_SERVICE","channel":"INTEGRATION_TEST","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"response":{"questionnaireId":"01213213213","unreceipt":false}}}`
+func testMessageProcessing(messageToSend string, expectedRabbitMessage string, topic string, project string, rabbitRoutingKey string) func(t *testing.T) {
+	return func(t *testing.T) {
+		if _, err := StartProcessors(ctx, cfg, make(chan error)); err != nil {
+			t.Error(err)
+			return
+		}
 
-	if _, err := StartProcessors(ctx, cfg, make(chan error)); err != nil {
-		t.Error(err)
-		return
+		rabbitConn, rabbitChan, err := connectToRabbitChannel()
+		defer rabbitConn.Close()
+		defer rabbitChan.Close()
+		if _, err := rabbitChan.QueuePurge(rabbitRoutingKey, true); err != nil {
+			t.Error(err)
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+		// When
+		if messageId, err := publishMessageToPubSub(ctx, messageToSend, topic, project); err != nil {
+			t.Errorf("PubSub publish fail, project: %s, topic: %s, id: %s, error: %s", project, topic, messageId, err)
+			return
+		}
+
+		rabbitMessage, err := getFirstMessageOnQueue(ctx, rabbitRoutingKey, rabbitChan)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		// Then
+		if rabbitMessage != expectedRabbitMessage {
+			t.Errorf("Rabbit messsage incorrect - \nexpected: %s \nactual: %s", expectedRabbitMessage, rabbitMessage)
+		}
+		cancel()
 	}
-
-	rabbitConn, rabbitChan, err := connectToRabbitChannel()
-	defer rabbitConn.Close()
-	defer rabbitChan.Close()
-	if _, err := rabbitChan.QueuePurge(cfg.ReceiptRoutingKey, true); err != nil {
-		t.Error(err)
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-
-	// When
-	if messageId, err := publishMessageToPubSub(ctx, offlineReceiptMsg, cfg.OfflineReceiptTopic, cfg.OfflineReceiptProject); err != nil {
-		t.Errorf("pubsub publish fail, project: %s, topic: %s, id: %s, error: %s", cfg.OfflineReceiptProject, cfg.OfflineReceiptTopic, messageId, err)
-		return
-	}
-
-	rabbitMessage, err := getFirstMessageOnQueue(ctx, cfg.ReceiptRoutingKey, rabbitChan)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	// Then
-	if rabbitMessage != expectedRabbitMessage {
-		t.Errorf("Rabbit messsage incorrect - \nexpected: %s \nactual: %s", expectedRabbitMessage, rabbitMessage)
-	}
-	cancel()
-}
-
-func TestPpoUndelivered(t *testing.T) {
-	// Given
-	ppoUndeliveredMsg := `{"dateTime": "2008-08-24T00:00:00Z", "transactionId": "abc123xxx", "caseRef": "0123456789", "productCode": "P_TEST_1"}`
-	expectedRabbitMessage := `{"event":{"type":"UNDELIVERED_MAIL_REPORTED","source":"RECEIPT_SERVICE","channel":"PPO","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"fulfilmentInformation":{"caseRef":"0123456789","fulfilmentCode":"P_TEST_1"}}}`
-
-	if _, err := StartProcessors(ctx, cfg, make(chan error)); err != nil {
-		t.Error(err)
-		return
-	}
-
-	rabbitConn, rabbitChan, err := connectToRabbitChannel()
-	defer rabbitConn.Close()
-	defer rabbitChan.Close()
-	if _, err := rabbitChan.QueuePurge(cfg.UndeliveredRoutingKey, true); err != nil {
-		t.Error(err)
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-
-	// When
-	if messageId, err := publishMessageToPubSub(ctx, ppoUndeliveredMsg, cfg.PpoUndeliveredTopic, cfg.PpoUndeliveredProject); err != nil {
-		t.Errorf("pubsub publish fail, project: %s, topic: %s, id: %s, error: %s", cfg.PpoUndeliveredProject, cfg.PpoUndeliveredTopic, messageId, err)
-		return
-	}
-
-	rabbitMessage, err := getFirstMessageOnQueue(ctx, cfg.UndeliveredRoutingKey, rabbitChan)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	// Then
-	if rabbitMessage != expectedRabbitMessage {
-		t.Errorf("Rabbit messsage incorrect - \nexpected: %s \nactual: %s", expectedRabbitMessage, rabbitMessage)
-	}
-	cancel()
-}
-
-func TestQmUndelivered(t *testing.T) {
-	// Given
-	qmUndeliveredMsg := `{"dateTime": "2008-08-24T00:00:00Z", "transactionId": "abc123xxx", "questionnaireId": "01213213213"}`
-	expectedRabbitMessage := `{"event":{"type":"UNDELIVERED_MAIL_REPORTED","source":"RECEIPT_SERVICE","channel":"QM","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"fulfilmentInformation":{"questionnaireId":"01213213213"}}}`
-
-	if _, err := StartProcessors(ctx, cfg, make(chan error)); err != nil {
-		t.Error(err)
-		return
-	}
-
-
-	rabbitConn, rabbitChan, err := connectToRabbitChannel()
-	defer rabbitConn.Close()
-	defer rabbitChan.Close()
-	if _, err := rabbitChan.QueuePurge(cfg.UndeliveredRoutingKey, true); err != nil {
-		t.Error(err)
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-
-	// When
-	if messageId, err := publishMessageToPubSub(ctx, qmUndeliveredMsg, cfg.QmUndeliveredTopic, cfg.QmUndeliveredProject); err != nil {
-		t.Errorf("pubsub publish fail, project: %s, topic: %s, id: %s, error: %s", cfg.QmUndeliveredProject, cfg.QmUndeliveredTopic, messageId, err)
-		return
-	}
-
-	rabbitMessage, err := getFirstMessageOnQueue(ctx, cfg.UndeliveredRoutingKey, rabbitChan)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	// Then
-	if rabbitMessage != expectedRabbitMessage {
-		t.Errorf("Rabbit messsage incorrect - \nexpected: %s \nactual: %s", expectedRabbitMessage, rabbitMessage)
-	}
-	cancel()
 }
 
 func TestStartProcessors(t *testing.T) {
