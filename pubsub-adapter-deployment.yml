@@ -80,14 +80,14 @@ spec:
                 configMapKeyRef:
                   name: project-config
                   key: project-name
-            - name: PPO_UNDELIVERED_SUBSCRIPTION_NAME
+            - name: PPO_UNDELIVERED_SUBSCRIPTION
               value: "rm-ppo-undelivered-subscription"
             - name: PPO_UNDELIVERED_SUBSCRIPTION_PROJECT
               valueFrom:
                 configMapKeyRef:
                   name: project-config
                   key: project-name
-            - name: QM_UNDELIVERED_SUBSCRIPTION_NAME
+            - name: QM_UNDELIVERED_SUBSCRIPTION
               value: "rm-qm-undelivered-subscription"
             - name: QM_UNDELIVERED_SUBSCRIPTION_PROJECT
               valueFrom:

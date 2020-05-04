@@ -36,7 +36,6 @@ func main() {
 	if err != nil {
 		shutdown(ctx, cancel, processors)
 	}
-	log.Println("PubSub Adapter successfully started")
 
 	// block until we receive eqReceiptProcessor shutdown signal
 	select {
