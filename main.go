@@ -29,11 +29,13 @@ func main() {
 
 	processors, err := StartProcessors(ctx, appConfig, errChan)
 	if err != nil {
+		log.Println(errors.Wrap(err, "Error starting processors"))
 		shutdown(ctx, cancel, processors)
 	}
 	// Indicate readiness
 	err = readiness.Ready(ctx, appConfig.ReadinessFilePath)
 	if err != nil {
+		log.Println(errors.Wrap(err, "Error indicating readiness"))
 		shutdown(ctx, cancel, processors)
 	}
 
