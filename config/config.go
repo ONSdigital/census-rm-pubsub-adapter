@@ -8,6 +8,7 @@ import (
 
 type Configuration struct {
 	ReadinessFilePath string `envconfig:"READINESS_FILE_PATH" default:"/tmp/pubsub-adapter-ready"`
+	LogLevel          string `envconfig:"LOG_LEVEL" default:"ERROR"`
 
 	// Rabbit
 	RabbitHost             string `envconfig:"RABBIT_HOST" required:"true"`

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
+	"github.com/ONSdigital/census-rm-pubsub-adapter/logger"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/processor"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/readiness"
 	"github.com/pkg/errors"
@@ -20,6 +21,13 @@ func main() {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 
+	// Configure the logger
+	err = logger.ConfigureLogger(appConfig)
+	if err != nil {
+		log.Fatal(errors.Wrap(err, "Failed to configure logger at startup"))
+	}
+	logger.Logger.Infow("Launching PubSub Adapter")
+
 	// Trap SIGINT to trigger graceful shutdown
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
@@ -29,22 +37,22 @@ func main() {
 
 	processors, err := StartProcessors(ctx, appConfig, errChan)
 	if err != nil {
-		log.Println(errors.Wrap(err, "Error starting processors"))
+		logger.Logger.Errorw("Error starting processors", "error", err)
 		shutdown(ctx, cancel, processors)
 	}
 	// Indicate readiness
 	err = readiness.Ready(ctx, appConfig.ReadinessFilePath)
 	if err != nil {
-		log.Println(errors.Wrap(err, "Error indicating readiness"))
+		logger.Logger.Errorw("Error indicating readiness", "error", err)
 		shutdown(ctx, cancel, processors)
 	}
 
 	// Block until we receive OS shutdown signal or error
 	select {
 	case sig := <-signals:
-		log.Printf("OS Signal Received: %s", sig.String())
+		logger.Logger.Infow("OS Signal Received", "signal", sig.String())
 	case err := <-errChan:
-		log.Println(errors.Wrap(err, "Error Received:"))
+		logger.Logger.Errorw("Error Received", "error", err)
 	}
 
 	shutdown(ctx, cancel, processors)
@@ -64,21 +72,21 @@ func StartProcessors(ctx context.Context, cfg *config.Configuration, errChan cha
 	// Start offline receipt processing
 	offlineReceiptProcessor, err := processor.NewOfflineReceiptProcessor(ctx, cfg, errChan)
 	if err != nil {
-		return nil, err
+		return processors, err
 	}
 	processors = append(processors, offlineReceiptProcessor)
 
 	// Start PPO undelivered processing
 	ppoUndeliveredProcessor, err := processor.NewPpoUndeliveredProcessor(ctx, cfg, errChan)
 	if err != nil {
-		return nil, err
+		return processors, err
 	}
 	processors = append(processors, ppoUndeliveredProcessor)
 
 	// Start QM undelivered processing
 	qmUndeliveredProcessor, err := processor.NewQmUndeliveredProcessor(ctx, cfg, errChan)
 	if err != nil {
-		return nil, err
+		return processors, err
 	}
 	processors = append(processors, qmUndeliveredProcessor)
 
@@ -87,7 +95,7 @@ func StartProcessors(ctx context.Context, cfg *config.Configuration, errChan cha
 
 func shutdown(ctx context.Context, cancel context.CancelFunc, processors []*processor.Processor) {
 	// cleanup for graceful shutdown
-	log.Printf("Shutting Down")
+	logger.Logger.Warn("Shutting Down")
 
 	// give the app 10 sec to cleanup before being killed
 	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 10*time.Second)
@@ -98,7 +106,7 @@ func shutdown(ctx context.Context, cancel context.CancelFunc, processors []*proc
 		// this will be called once cleanup completes or when the timeout is reached
 		defer shutdownCancel()
 
-		log.Printf("Rabbit Cleanup")
+		logger.Logger.Info("Starting rabbit cleanup")
 		for _, p := range processors {
 			p.CloseRabbit()
 		}
@@ -108,6 +116,6 @@ func shutdown(ctx context.Context, cancel context.CancelFunc, processors []*proc
 	//block until shutdown cancel has been called
 	<-shutdownCtx.Done()
 
-	log.Printf("CloseRabbit complete")
+	logger.Logger.Error("Shutdown complete")
 	os.Exit(1)
 }

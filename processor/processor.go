@@ -5,10 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
+	"github.com/ONSdigital/census-rm-pubsub-adapter/logger"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
-	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
-	"log"
 )
 
 type messageUnmarshaller func([]byte) (models.PubSubMessage, error)
@@ -65,19 +64,20 @@ func NewProcessor(ctx context.Context,
 	p.MessageChan = make(chan pubsub.Message)
 
 	// Start processing messages on the channel
+	ctxLogger := logger.Logger.With("subscription", p.PubSubSubscription.ID())
+	ctxLogger.Infow("Launching message processor")
 	go p.Process(ctx)
 
 	// Start consuming from PubSub
+	ctxLogger.Infow("Launching PubSub message receiver")
 	go p.Consume(ctx)
 
 	return p, nil
 }
 
 func (p *Processor) Consume(ctx context.Context) {
-	log.Printf("Launching PubSub message listener on subcription %s\n", p.PubSubSubscription.String())
-
 	err := p.PubSubSubscription.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
-		log.Printf("Got message: %q\n", string(msg.Data))
+		logger.Logger.Debugw("Consumer got message", "data", string(msg.Data), "subscription", p.PubSubSubscription)
 		p.MessageChan <- *msg
 	})
 	if err != nil {
@@ -92,18 +92,19 @@ func (p *Processor) Process(ctx context.Context) {
 			messageReceived, err := p.unmarshallMessage(msg.Data)
 			if err != nil {
 				// TODO Log the error and DLQ the message when unmarshalling fails, printing it out is p temporary solution
-				log.Println(errors.WithMessagef(err, "Error unmarshalling message: %q", string(msg.Data)))
+				logger.Logger.Errorw("Error unmarshalling message", "error", err, "data", string(msg.Data))
 				msg.Ack()
 				return
 			}
-			log.Printf("Got tx_id: %q\n", messageReceived.GetTransactionId())
+			ctxLogger := logger.Logger.With("transactionId", messageReceived.GetTransactionId())
+			ctxLogger.Debugw("Processing message")
 			rmMessageToSend, err := p.convertMessage(messageReceived)
 			if err != nil {
-				log.Println(errors.Wrapf(err, "Failed to convert message, tx_id: %s", messageReceived.GetTransactionId()))
+				ctxLogger.Errorw("Failed to convert message", "error", err)
 			}
 			err = p.publishEventToRabbit(rmMessageToSend, p.RabbitRoutingKey, p.Config.EventsExchange)
 			if err != nil {
-				log.Println(errors.WithMessagef(err, "Failed to publish message, tx_id: %s", rmMessageToSend.Event.TransactionID))
+				ctxLogger.Errorw("Failed to publish message", "error", err)
 				msg.Nack()
 			} else {
 				msg.Ack()
@@ -136,15 +137,15 @@ func (p *Processor) publishEventToRabbit(message *models.RmMessage, routingKey s
 		return err
 	}
 
-	log.Printf(" [x] routingKey: %s, Sent %s", routingKey, string(byteMessage))
+	logger.Logger.Debugw("Published message", "routingKey", routingKey, "transactionId", message.Event.TransactionID)
 	return nil
 }
 
 func (p *Processor) CloseRabbit() {
 	if err := p.RabbitChannel.Close(); err != nil {
-		log.Println(errors.Wrapf(err, "Error closing rabbit channel during shutdown of %s processor", p.PubSubSubscription))
+		logger.Logger.Errorw("Error closing rabbit channel during shutdown of processor", "subscription", p.PubSubSubscription, "error", err)
 	}
 	if err := p.RabbitConn.Close(); err != nil {
-		log.Println(errors.Wrapf(err, "Error closing rabbit connection during shutdown of %s processor", p.PubSubSubscription))
+		logger.Logger.Errorw("Error closing rabbit connection during shutdown of processor", "subscription", p.PubSubSubscription, "error", err)
 	}
 }
