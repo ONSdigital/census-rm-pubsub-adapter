@@ -17,7 +17,7 @@ type messageConverter func(message models.PubSubMessage) (*models.RmMessage, err
 
 type Processor struct {
 	RabbitConn         *amqp.Connection
-	RabbitChan         *amqp.Channel
+	RabbitChannel      *amqp.Channel
 	RabbitRoutingKey   string
 	Config             *config.Configuration
 	PubSubClient       *pubsub.Client
@@ -25,6 +25,7 @@ type Processor struct {
 	MessageChan        chan pubsub.Message
 	unmarshallMessage  messageUnmarshaller
 	convertMessage     messageConverter
+	ErrChan            chan error
 }
 
 func NewProcessor(ctx context.Context,
@@ -33,30 +34,43 @@ func NewProcessor(ctx context.Context,
 	pubSubSubscription string,
 	routingKey string,
 	messageConverter messageConverter,
-	messageUnmarshaller messageUnmarshaller) *Processor {
+	messageUnmarshaller messageUnmarshaller, errChan chan error) (*Processor, error) {
 	var err error
 	p := &Processor{}
 	p.Config = appConfig
 	p.RabbitRoutingKey = routingKey
 	p.convertMessage = messageConverter
 	p.unmarshallMessage = messageUnmarshaller
+	p.ErrChan = errChan
 
-	//set up rabbit connection
+	// Set up rabbit connection
 	p.RabbitConn, err = amqp.Dial(appConfig.RabbitConnectionString)
-	failOnError(err, "Failed to connect to RabbitMQ")
+	if err != nil {
+		return nil, err
+	}
 
-	p.RabbitChan, err = p.RabbitConn.Channel()
-	failOnError(err, "Failed to open p channel")
+	p.RabbitChannel, err = p.RabbitConn.Channel()
+	if err != nil {
+		return nil, err
+	}
 
-	//setup pubsub connection
+	// Setup PubSub connection
 	p.PubSubClient, err = pubsub.NewClient(ctx, pubSubProject)
-	failOnError(err, "Pubsub client creation failed")
+	if err != nil {
+		return nil, err
+	}
 
-	//setup subscription
+	// Setup subscription
 	p.PubSubSubscription = p.PubSubClient.Subscription(pubSubSubscription)
 	p.MessageChan = make(chan pubsub.Message)
 
-	return p
+	// Start processing messages on the channel
+	go p.Process(ctx)
+
+	// Start consuming from PubSub
+	go p.Consume(ctx)
+
+	return p, nil
 }
 
 func (p *Processor) Consume(ctx context.Context) {
@@ -67,8 +81,7 @@ func (p *Processor) Consume(ctx context.Context) {
 		p.MessageChan <- *msg
 	})
 	if err != nil {
-		log.Printf("Receive: %v\n", err)
-		return
+		p.ErrChan <- err
 	}
 }
 
@@ -109,7 +122,7 @@ func (p *Processor) publishEventToRabbit(message *models.RmMessage, routingKey s
 		return err
 	}
 
-	err = p.RabbitChan.Publish(
+	err = p.RabbitChannel.Publish(
 		exchange,
 		routingKey, // routing key (the queue)
 		false,      // mandatory
@@ -128,16 +141,10 @@ func (p *Processor) publishEventToRabbit(message *models.RmMessage, routingKey s
 }
 
 func (p *Processor) CloseRabbit() {
-	if err := p.RabbitChan.Close(); err != nil {
+	if err := p.RabbitChannel.Close(); err != nil {
 		log.Println(errors.Wrapf(err, "Error closing rabbit channel during shutdown of %s processor", p.PubSubSubscription))
 	}
 	if err := p.RabbitConn.Close(); err != nil {
 		log.Println(errors.Wrapf(err, "Error closing rabbit connection during shutdown of %s processor", p.PubSubSubscription))
-	}
-}
-
-func failOnError(err error, msg string) {
-	if err != nil {
-		log.Fatalf("%s: %s", msg, err)
 	}
 }

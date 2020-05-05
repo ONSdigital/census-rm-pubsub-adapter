@@ -34,6 +34,15 @@ spec:
             limits:
               cpu: "0.4"
               memory: "64Mi"
+          readinessProbe:
+            exec:
+              command:
+                - cat
+                - $(READINESS_FILE_PATH)
+            initialDelaySeconds: 1
+            periodSeconds: 2
+            failureThreshold: 10
+            successThreshold: 1
           volumeMounts:
             - name: gcp-credentials-volume
               mountPath: /gcp-credentials
@@ -62,14 +71,14 @@ spec:
                 configMapKeyRef:
                   name: project-config
                   key: project-name
-            - name: PPO_UNDELIVERED_SUBSCRIPTION_NAME
+            - name: PPO_UNDELIVERED_SUBSCRIPTION
               value: "rm-ppo-undelivered-subscription"
             - name: PPO_UNDELIVERED_SUBSCRIPTION_PROJECT
               valueFrom:
                 configMapKeyRef:
                   name: project-config
                   key: project-name
-            - name: QM_UNDELIVERED_SUBSCRIPTION_NAME
+            - name: QM_UNDELIVERED_SUBSCRIPTION
               value: "rm-qm-undelivered-subscription"
             - name: QM_UNDELIVERED_SUBSCRIPTION_PROJECT
               valueFrom:
@@ -92,6 +101,8 @@ spec:
                 secretKeyRef:
                   name: rabbitmq
                   key: rabbitmq-password
+            - name: READINESS_FILE_PATH
+              value: "/tmp/pubsub-adapter-ready"
       volumes:
         - name: gcp-credentials-volume
           secret:

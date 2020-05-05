@@ -9,8 +9,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-func NewOfflineReceiptProcessor(ctx context.Context, appConfig *config.Configuration) *Processor {
-	return NewProcessor(ctx, appConfig, appConfig.OfflineReceiptProject, appConfig.OfflineReceiptSubscription, appConfig.ReceiptRoutingKey, convertOfflineReceiptToRmMessage, unmarshalOfflineReceipt)
+func NewOfflineReceiptProcessor(ctx context.Context, appConfig *config.Configuration, errChan chan error) (*Processor, error) {
+	return NewProcessor(ctx, appConfig, appConfig.OfflineReceiptProject, appConfig.OfflineReceiptSubscription, appConfig.ReceiptRoutingKey, convertOfflineReceiptToRmMessage, unmarshalOfflineReceipt, errChan)
 }
 
 func unmarshalOfflineReceipt(data []byte) (models.PubSubMessage, error) {

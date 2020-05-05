@@ -7,6 +7,8 @@ import (
 )
 
 type Configuration struct {
+	ReadinessFilePath string `envconfig:"READINESS_FILE_PATH" default:"/tmp/pubsub-adapter-ready"`
+
 	// Rabbit
 	RabbitHost             string `envconfig:"RABBIT_HOST" required:"true"`
 	RabbitPort             string `envconfig:"RABBIT_PORT" required:"true"`
