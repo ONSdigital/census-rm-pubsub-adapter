@@ -23,6 +23,7 @@ PPO_UNDELIVERED_SUBSCRIPTION_PROJECT
 ### Config to run locally against docker-compose dependencies
 
 ```sh 
+LOG_LEVEL=DEBUG
 RABBIT_HOST=localhost
 RABBIT_PORT=7672
 RABBIT_USERNAME=guest
@@ -40,6 +41,7 @@ UNDELIVERED_ROUTING_KEY=goTestUndeliveredQueue
 ### Config to run locally against docker dev
 
 ```sh 
+LOG_LEVEL=INFO
 RABBIT_HOST=localhost
 RABBIT_PORT=6672
 RABBIT_USERNAME=guest
