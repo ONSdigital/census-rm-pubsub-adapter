@@ -35,6 +35,7 @@ services:
       - OFFLINE_RECEIPT_PROJECT=offline-project
       - QM_UNDELIVERED_SUBSCRIPTION_PROJECT=qm-undelivered-project
       - PPO_UNDELIVERED_SUBSCRIPTION_PROJECT=ppo-undelivered-project
+      - LOG_LEVEL=INFO
     restart: on-failure
     healthcheck:
       test: ["CMD", "find", "/tmp/pubsub-adapter-ready", "-mmin", "-1"]
