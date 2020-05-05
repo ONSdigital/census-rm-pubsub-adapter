@@ -4,14 +4,13 @@ import (
 	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"strings"
 )
 
 var Logger *zap.SugaredLogger
 
 func getZapLevel(textLevel string) (zap.AtomicLevel, error) {
 	level := zap.AtomicLevel{}
-	err := level.UnmarshalText([]byte(strings.ToLower(textLevel)))
+	err := level.UnmarshalText([]byte(textLevel))
 	return level, err
 }
 
