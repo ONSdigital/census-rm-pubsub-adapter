@@ -21,7 +21,7 @@ type Processor struct {
 	Config             *config.Configuration
 	PubSubClient       *pubsub.Client
 	PubSubSubscription *pubsub.Subscription
-	MessageChan        chan pubsub.Message
+	MessageChan        chan *pubsub.Message
 	unmarshallMessage  messageUnmarshaller
 	convertMessage     messageConverter
 	ErrChan            chan error
@@ -61,7 +61,7 @@ func NewProcessor(ctx context.Context,
 
 	// Setup subscription
 	p.PubSubSubscription = p.PubSubClient.Subscription(pubSubSubscription)
-	p.MessageChan = make(chan pubsub.Message)
+	p.MessageChan = make(chan *pubsub.Message)
 
 	// Start processing messages on the channel
 	ctxLogger := logger.Logger.With("subscription", p.PubSubSubscription.ID())
@@ -77,8 +77,9 @@ func NewProcessor(ctx context.Context,
 
 func (p *Processor) Consume(ctx context.Context) {
 	err := p.PubSubSubscription.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
-		logger.Logger.Debugw("Consumer got message", "data", string(msg.Data), "subscription", p.PubSubSubscription)
-		p.MessageChan <- *msg
+
+		logger.Logger.Debugw("Consumer got msg", "data", string(msg.Data), "subscription", p.PubSubSubscription)
+		p.MessageChan <- msg
 	})
 	if err != nil {
 		p.ErrChan <- err
@@ -91,10 +92,16 @@ func (p *Processor) Process(ctx context.Context) {
 		case msg := <-p.MessageChan:
 			messageReceived, err := p.unmarshallMessage(msg.Data)
 			if err != nil {
-				// TODO Log the error and DLQ the message when unmarshalling fails, printing it out is p temporary solution
-				logger.Logger.Errorw("Error unmarshalling message", "error", err, "data", string(msg.Data))
-				msg.Ack()
-				return
+				logger.Logger.Errorw("Error unmarshalling message, quarantining", "error", err, "data", string(msg.Data))
+				err = p.quarantineMessageInRabbit(msg)
+				if err != nil {
+					logger.Logger.Errorw("Error quarantining bad message, nacking", "error", err, "data", string(msg.Data))
+					msg.Nack()
+				} else {
+					logger.Logger.Infow("ACKING", "messageId", msg.ID, "msgData", msg.Data)
+					msg.Ack()
+				}
+				continue
 			}
 			ctxLogger := logger.Logger.With("transactionId", messageReceived.GetTransactionId())
 			ctxLogger.Debugw("Processing message")
@@ -107,6 +114,7 @@ func (p *Processor) Process(ctx context.Context) {
 				ctxLogger.Errorw("Failed to publish message", "error", err)
 				msg.Nack()
 			} else {
+				logger.Logger.Infow("ACKING", "messageId", msg.ID, "msgData", msg.Data)
 				msg.Ack()
 			}
 		case <-ctx.Done():
@@ -138,6 +146,32 @@ func (p *Processor) publishEventToRabbit(message *models.RmMessage, routingKey s
 	}
 
 	logger.Logger.Debugw("Published message", "routingKey", routingKey, "transactionId", message.Event.TransactionID)
+	return nil
+}
+
+func (p *Processor) quarantineMessageInRabbit(message *pubsub.Message) error {
+	headers := amqp.Table{
+		"pubSubId": message.ID,
+	}
+	for key, value := range message.Attributes {
+		headers[key] = value
+	}
+	err := p.RabbitChannel.Publish(
+		"",
+		p.Config.DlqRoutingKey, // routing key (the queue)
+		false,                  // mandatory
+		false,                  // immediate
+		amqp.Publishing{
+			ContentType:  "application/json",
+			Body:         message.Data,
+			Headers:      headers,
+			DeliveryMode: 2, // 2 = persistent delivery mode
+		})
+	if err != nil {
+		return err
+	}
+
+	logger.Logger.Debugw("Quarantined message", "DlqRoutingKey", p.Config.DlqRoutingKey, "data", string(message.Data))
 	return nil
 }
 

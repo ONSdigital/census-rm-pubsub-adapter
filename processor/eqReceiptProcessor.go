@@ -15,10 +15,13 @@ func NewEqReceiptProcessor(ctx context.Context, appConfig *config.Configuration,
 
 func unmarshalEqReceipt(data []byte) (models.PubSubMessage, error) {
 	var eqReceipt models.EqReceipt
-	err := json.Unmarshal(data, &eqReceipt)
-	if err != nil {
+	if err := json.Unmarshal(data, &eqReceipt); err != nil {
 		return nil, err
 	}
+	if ok := eqReceipt.Validate(); !ok {
+		return nil, errors.New("message is not valid")
+	}
+
 	return eqReceipt, nil
 }
 

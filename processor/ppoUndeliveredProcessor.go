@@ -18,6 +18,9 @@ func unmarshalPpoUndelivered(data []byte) (models.PubSubMessage, error) {
 	if err := json.Unmarshal(data, &ppoUndelivered); err != nil {
 		return nil, err
 	}
+	if ok := ppoUndelivered.Validate(); !ok {
+		return nil, errors.New("message is not valid")
+	}
 	return ppoUndelivered, nil
 }
 

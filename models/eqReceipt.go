@@ -1,6 +1,8 @@
 package models
 
-import "time"
+import (
+	"time"
+)
 
 type EqReceiptMetadata struct {
 	TransactionId   string `json:"tx_id"`
@@ -15,4 +17,8 @@ type EqReceipt struct {
 
 func (e EqReceipt) GetTransactionId() string {
 	return e.Metadata.TransactionId
+}
+
+func (e EqReceipt) Validate() bool {
+	return e.GetTransactionId() != ""
 }

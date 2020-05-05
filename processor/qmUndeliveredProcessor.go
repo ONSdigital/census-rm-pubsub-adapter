@@ -15,9 +15,11 @@ func NewQmUndeliveredProcessor(ctx context.Context, appConfig *config.Configurat
 
 func unmarshalQmUndelivered(data []byte) (models.PubSubMessage, error) {
 	var qmUndelivered models.QmUndelivered
-	err := json.Unmarshal(data, &qmUndelivered)
-	if err != nil {
+	if err := json.Unmarshal(data, &qmUndelivered); err != nil {
 		return nil, err
+	}
+	if ok := qmUndelivered.Validate(); !ok {
+		return nil, errors.New("message is not valid")
 	}
 	return qmUndelivered, nil
 }

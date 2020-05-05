@@ -20,6 +20,7 @@ type Configuration struct {
 	EventsExchange         string `envconfig:"RABBIT_EXCHANGE"  default:"events"`
 	ReceiptRoutingKey      string `envconfig:"RECEIPT_ROUTING_KEY"  default:"event.response.receipt"`
 	UndeliveredRoutingKey  string `envconfig:"UNDELIVERED_ROUTING_KEY"  default:"event.fulfilment.undelivered"`
+	DlqRoutingKey          string `envconfig:"DLQ_ROUTING_KEY"  default:"pubsub.quarantine"`
 
 	// PubSub
 	EqReceiptProject           string `envconfig:"EQ_RECEIPT_PROJECT" required:"true"`

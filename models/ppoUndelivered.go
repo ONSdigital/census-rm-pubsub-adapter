@@ -10,3 +10,7 @@ type PpoUndelivered struct {
 func (p PpoUndelivered) GetTransactionId() string {
 	return p.TransactionId
 }
+
+func (p PpoUndelivered) Validate() bool {
+	return p.GetTransactionId() != ""
+}

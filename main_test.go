@@ -11,6 +11,7 @@ import (
 	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
 	"github.com/streadway/amqp"
 	"os"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -19,11 +20,14 @@ var ctx context.Context
 var cfg *config.Configuration
 
 func TestMain(m *testing.M) {
+	// These tests interact with data in backing services so cannot be run in parallel
+	runtime.GOMAXPROCS(1)
 	ctx = context.Background()
 	cfg = &config.Configuration{
 		RabbitConnectionString:     "amqp://guest:guest@localhost:7672/",
 		ReceiptRoutingKey:          "goTestReceiptQueue",
 		UndeliveredRoutingKey:      "goTestUndeliveredQueue",
+		DlqRoutingKey:              "goTestQuarantineQueue",
 		EqReceiptProject:           "project",
 		EqReceiptSubscription:      "rm-receipt-subscription",
 		EqReceiptTopic:             "eq-submission-topic",
@@ -63,6 +67,18 @@ func TestMessageProcessing(t *testing.T) {
 		cfg.QmUndeliveredTopic, cfg.QmUndeliveredProject, cfg.UndeliveredRoutingKey))
 }
 
+func TestMessageQuarantining(t *testing.T) {
+	t.Run("Test bad non JSON message is quarantined", testMessageProcessing(
+		`bad_message`,
+		`bad_message`,
+		cfg.EqReceiptTopic, cfg.EqReceiptProject, cfg.DlqRoutingKey))
+
+	t.Run("Test bad message missing transaction ID is quarantined", testMessageProcessing(
+		`{"thisMessage": "is_missing_tx_id"}`,
+		`{"thisMessage": "is_missing_tx_id"}`,
+		cfg.EqReceiptTopic, cfg.EqReceiptProject, cfg.DlqRoutingKey))
+}
+
 func testMessageProcessing(messageToSend string, expectedRabbitMessage string, topic string, project string, rabbitRoutingKey string) func(t *testing.T) {
 	return func(t *testing.T) {
 		if _, err := StartProcessors(ctx, cfg, make(chan error)); err != nil {
@@ -70,10 +86,10 @@ func testMessageProcessing(messageToSend string, expectedRabbitMessage string, t
 			return
 		}
 
-		rabbitConn, rabbitChan, err := connectToRabbitChannel()
+		rabbitConn, rabbitCh, err := connectToRabbitChannel()
+		defer rabbitCh.Close()
 		defer rabbitConn.Close()
-		defer rabbitChan.Close()
-		if _, err := rabbitChan.QueuePurge(rabbitRoutingKey, true); err != nil {
+		if _, err := rabbitCh.QueuePurge(rabbitRoutingKey, false); err != nil {
 			t.Error(err)
 			return
 		}
@@ -86,7 +102,7 @@ func testMessageProcessing(messageToSend string, expectedRabbitMessage string, t
 			return
 		}
 
-		rabbitMessage, err := getFirstMessageOnQueue(ctx, rabbitRoutingKey, rabbitChan)
+		rabbitMessage, err := getFirstMessageOnQueue(ctx, rabbitRoutingKey, rabbitCh)
 		if err != nil {
 			t.Error(err)
 			return

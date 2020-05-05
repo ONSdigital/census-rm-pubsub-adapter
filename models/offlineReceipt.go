@@ -11,3 +11,7 @@ type OfflineReceipt struct {
 func (o OfflineReceipt) GetTransactionId() string {
 	return o.TransactionId
 }
+
+func (o OfflineReceipt) Validate() bool {
+	return o.GetTransactionId() != ""
+}

@@ -15,9 +15,11 @@ func NewOfflineReceiptProcessor(ctx context.Context, appConfig *config.Configura
 
 func unmarshalOfflineReceipt(data []byte) (models.PubSubMessage, error) {
 	var offlineReceipt models.OfflineReceipt
-	err := json.Unmarshal(data, &offlineReceipt)
-	if err != nil {
+	if err := json.Unmarshal(data, &offlineReceipt); err != nil {
 		return nil, err
+	}
+	if ok := offlineReceipt.Validate(); !ok {
+		return nil, errors.New("message is not valid")
 	}
 	return offlineReceipt, nil
 }

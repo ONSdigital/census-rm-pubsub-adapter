@@ -9,3 +9,7 @@ type QmUndelivered struct {
 func (q QmUndelivered) GetTransactionId() string {
 	return q.TransactionId
 }
+
+func (q QmUndelivered) Validate() bool {
+	return q.GetTransactionId() != ""
+}
