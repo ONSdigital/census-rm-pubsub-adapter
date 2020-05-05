@@ -25,9 +25,9 @@ func Ready(ctx context.Context, readinessFilePath string) error {
 
 func removeReadyWhenDone(ctx context.Context, readinessFilePath string) {
 	<-ctx.Done()
-	        log.Println("Removing readiness file")
-		err := os.Remove(readinessFilePath)
-		if err != nil {
-			log.Println(errors.Wrap(err, fmt.Sprintf("Error removing readiness file: %s", readinessFilePath)))
-		}
+	log.Println("Removing readiness file")
+	err := os.Remove(readinessFilePath)
+	if err != nil {
+		log.Println(errors.Wrap(err, fmt.Sprintf("Error removing readiness file: %s", readinessFilePath)))
+	}
 }
