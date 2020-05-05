@@ -50,7 +50,7 @@ func main() {
 	// Block until we receive OS shutdown signal or error
 	select {
 	case sig := <-signals:
-		logger.Logger.Infow("OS Signal Received", "signal", sig.String())
+		logger.Logger.Errorw("OS Signal Received", "signal", sig.String())
 	case err := <-errChan:
 		logger.Logger.Errorw("Error Received", "error", err)
 	}
@@ -95,7 +95,7 @@ func StartProcessors(ctx context.Context, cfg *config.Configuration, errChan cha
 
 func shutdown(ctx context.Context, cancel context.CancelFunc, processors []*processor.Processor) {
 	// cleanup for graceful shutdown
-	logger.Logger.Warn("Shutting Down")
+	logger.Logger.Error("Shutting Down")
 
 	// give the app 10 sec to cleanup before being killed
 	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 10*time.Second)
