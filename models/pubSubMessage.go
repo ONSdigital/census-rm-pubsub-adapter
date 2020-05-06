@@ -2,5 +2,5 @@ package models
 
 type PubSubMessage interface {
 	GetTransactionId() string
-	Validate() bool
+	Validate() error
 }

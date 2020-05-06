@@ -1,5 +1,7 @@
 package models
 
+import "errors"
+
 type OfflineReceipt struct {
 	TimeCreated     HazyUtcTime `json:"dateTime"`
 	TransactionId   string      `json:"transactionId"`
@@ -12,6 +14,15 @@ func (o OfflineReceipt) GetTransactionId() string {
 	return o.TransactionId
 }
 
-func (o OfflineReceipt) Validate() bool {
-	return o.GetTransactionId() != ""
+func (o OfflineReceipt) Validate() error {
+	if o.GetTransactionId() == "" {
+		return errors.New("OfflineReceipt missing transaction ID")
+	}
+	if o.TimeCreated.IsZero() {
+		return errors.New("OfflineReceipt missing dateTime")
+	}
+	if o.QuestionnaireId == "" {
+		return errors.New("OfflineReceipt missing questionnaire ID")
+	}
+	return nil
 }

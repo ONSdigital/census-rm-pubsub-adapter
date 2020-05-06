@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"time"
 )
 
@@ -19,6 +20,15 @@ func (e EqReceipt) GetTransactionId() string {
 	return e.Metadata.TransactionId
 }
 
-func (e EqReceipt) Validate() bool {
-	return e.GetTransactionId() != ""
+func (e EqReceipt) Validate() error {
+	if e.GetTransactionId() == "" {
+		return errors.New("EqReceipt missing transaction ID")
+	}
+	if e.TimeCreated.IsZero() {
+		return errors.New("EqReceipt missing timeCreated")
+	}
+	if e.Metadata.QuestionnaireId == "" {
+		return errors.New("EqReceipt missing questionnaire ID")
+	}
+	return nil
 }

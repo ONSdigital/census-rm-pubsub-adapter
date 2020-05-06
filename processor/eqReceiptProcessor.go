@@ -18,8 +18,8 @@ func unmarshalEqReceipt(data []byte) (models.PubSubMessage, error) {
 	if err := json.Unmarshal(data, &eqReceipt); err != nil {
 		return nil, err
 	}
-	if ok := eqReceipt.Validate(); !ok {
-		return nil, errors.New("message is not valid")
+	if err := eqReceipt.Validate(); err != nil {
+		return nil, err
 	}
 
 	return eqReceipt, nil

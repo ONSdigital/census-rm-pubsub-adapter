@@ -18,8 +18,8 @@ func unmarshalQmUndelivered(data []byte) (models.PubSubMessage, error) {
 	if err := json.Unmarshal(data, &qmUndelivered); err != nil {
 		return nil, err
 	}
-	if ok := qmUndelivered.Validate(); !ok {
-		return nil, errors.New("message is not valid")
+	if err := qmUndelivered.Validate(); err != nil {
+		return nil, err
 	}
 	return qmUndelivered, nil
 }
