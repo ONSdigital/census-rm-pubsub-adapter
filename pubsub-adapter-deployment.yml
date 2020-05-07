@@ -103,6 +103,8 @@ spec:
                   key: rabbitmq-password
             - name: READINESS_FILE_PATH
               value: "/tmp/pubsub-adapter-ready"
+            - name: LOG_LEVEL
+              value: "INFO"
       volumes:
         - name: gcp-credentials-volume
           secret:

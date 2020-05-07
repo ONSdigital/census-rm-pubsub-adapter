@@ -2,17 +2,14 @@ package readiness
 
 import (
 	"context"
-	"fmt"
-	"github.com/pkg/errors"
-	"log"
+	"github.com/ONSdigital/census-rm-pubsub-adapter/logger"
 	"os"
 )
 
 func Ready(ctx context.Context, readinessFilePath string) error {
 	_, err := os.Stat(readinessFilePath)
 	if err == nil {
-		// TODO Log a warning that the readiness file already existed
-		log.Println("Readiness file already existed")
+		logger.Logger.Errorw("Readiness file already existed", "readinessFilePath", readinessFilePath)
 	}
 	_, err = os.Create(readinessFilePath)
 	if err != nil {
@@ -25,9 +22,9 @@ func Ready(ctx context.Context, readinessFilePath string) error {
 
 func removeReadyWhenDone(ctx context.Context, readinessFilePath string) {
 	<-ctx.Done()
-	log.Println("Removing readiness file")
+	logger.Logger.Info("Removing readiness file")
 	err := os.Remove(readinessFilePath)
 	if err != nil {
-		log.Println(errors.Wrap(err, fmt.Sprintf("Error removing readiness file: %s", readinessFilePath)))
+		logger.Logger.Errorw("Error removing readiness file", "readinessFilePath", readinessFilePath, "error", err)
 	}
 }
