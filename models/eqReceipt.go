@@ -12,7 +12,7 @@ type EqReceiptMetadata struct {
 }
 
 type EqReceipt struct {
-	TimeCreated time.Time         `json:"timeCreated"`
+	TimeCreated *time.Time        `json:"timeCreated"`
 	Metadata    EqReceiptMetadata `json:"metadata"`
 }
 
@@ -24,7 +24,7 @@ func (e EqReceipt) Validate() error {
 	if e.GetTransactionId() == "" {
 		return errors.New("EqReceipt missing transaction ID")
 	}
-	if e.TimeCreated.IsZero() {
+	if e.TimeCreated == nil {
 		return errors.New("EqReceipt missing timeCreated")
 	}
 	if e.Metadata.QuestionnaireId == "" {

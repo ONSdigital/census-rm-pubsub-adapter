@@ -14,11 +14,11 @@ type RmPayload struct {
 }
 
 type RmEvent struct {
-	Type          string    `json:"type"`
-	Source        string    `json:"source"`
-	Channel       string    `json:"channel"`
-	DateTime      time.Time `json:"dateTime"`
-	TransactionID string    `json:"transactionId"`
+	Type          string     `json:"type"`
+	Source        string     `json:"source"`
+	Channel       string     `json:"channel"`
+	DateTime      *time.Time `json:"dateTime"`
+	TransactionID string     `json:"transactionId"`
 }
 
 type RmMessage struct {

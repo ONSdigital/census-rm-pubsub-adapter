@@ -143,9 +143,9 @@ func (p *Processor) quarantineMessageInRabbit(message *pubsub.Message) error {
 		headers[key] = value
 	}
 	err := p.RabbitChannel.Publish(
-		"",
+		"",                     // empty string for the default exchange
 		p.Config.DlqRoutingKey, // routing key (the queue)
-		false,                  // mandatory
+		false,                  // immediate
 		false,                  // immediate
 		amqp.Publishing{
 			ContentType:  "application/json",

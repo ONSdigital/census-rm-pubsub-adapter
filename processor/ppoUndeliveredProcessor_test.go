@@ -11,7 +11,7 @@ func TestConvertPpoUndeliveredToRmMessage(t *testing.T) {
 	timeCreated, _ := time.Parse("2006-07-08T03:04:05Z", "2008-08-24T00:00:00Z")
 	hazyTimeCreated := models.HazyUtcTime{Time: timeCreated}
 	ppoUndeliveredMessage := models.PpoUndelivered{
-		DateTime:      hazyTimeCreated,
+		DateTime:      &hazyTimeCreated,
 		TransactionId: "abc123xxx",
 		CaseRef:       "123456789",
 		ProductCode:   "P_TEST_1",
@@ -22,7 +22,7 @@ func TestConvertPpoUndeliveredToRmMessage(t *testing.T) {
 			Type:          "UNDELIVERED_MAIL_REPORTED",
 			Source:        "RECEIPT_SERVICE",
 			Channel:       "PPO",
-			DateTime:      timeCreated,
+			DateTime:      &timeCreated,
 			TransactionID: "abc123xxx",
 		},
 		Payload: models.RmPayload{

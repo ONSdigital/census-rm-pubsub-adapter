@@ -3,9 +3,9 @@ package models
 import "errors"
 
 type QmUndelivered struct {
-	TransactionId   string      `json:"transactionId"`
-	DateTime        HazyUtcTime `json:"dateTime"`
-	QuestionnaireId string      `json:"questionnaireId"`
+	TransactionId   string       `json:"transactionId"`
+	DateTime        *HazyUtcTime `json:"dateTime"`
+	QuestionnaireId string       `json:"questionnaireId"`
 }
 
 func (q QmUndelivered) GetTransactionId() string {
@@ -16,7 +16,7 @@ func (q QmUndelivered) Validate() error {
 	if q.GetTransactionId() == "" {
 		return errors.New("QmUndelivered missing transaction ID")
 	}
-	if q.DateTime.IsZero() {
+	if q.DateTime == nil {
 		return errors.New("QmUndelivered missing dateTime")
 	}
 	if q.QuestionnaireId == "" {

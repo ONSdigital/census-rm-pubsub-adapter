@@ -52,6 +52,7 @@ func main() {
 	case sig := <-signals:
 		logger.Logger.Infow("OS Signal Received", "signal", sig.String())
 	case err := <-errChan:
+		// TODO This is a temporary solution, it is not ideal because an error in any one of the consumers will kill them all
 		logger.Logger.Errorw("Error Received", "error", err)
 	}
 

@@ -34,7 +34,7 @@ func convertOfflineReceiptToRmMessage(receipt models.PubSubMessage) (*models.RmM
 			Type:          "RESPONSE_RECEIVED",
 			Source:        "RECEIPT_SERVICE",
 			Channel:       offlineReceipt.Channel,
-			DateTime:      offlineReceipt.TimeCreated.Time,
+			DateTime:      &offlineReceipt.TimeCreated.Time,
 			TransactionID: offlineReceipt.TransactionId,
 		},
 		Payload: models.RmPayload{

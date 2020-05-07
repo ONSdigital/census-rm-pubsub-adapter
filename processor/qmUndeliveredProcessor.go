@@ -35,7 +35,7 @@ func convertQmUndeliveredToRmMessage(message models.PubSubMessage) (*models.RmMe
 			Type:          "UNDELIVERED_MAIL_REPORTED",
 			Source:        "RECEIPT_SERVICE",
 			Channel:       "QM",
-			DateTime:      qmUndelivered.DateTime.Time,
+			DateTime:      &qmUndelivered.DateTime.Time,
 			TransactionID: qmUndelivered.TransactionId,
 		},
 		Payload: models.RmPayload{
