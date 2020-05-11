@@ -52,6 +52,7 @@ func main() {
 	case sig := <-signals:
 		logger.Logger.Infow("OS Signal Received", "signal", sig.String())
 	case err := <-errChan:
+		// TODO Make some attempt to restart receivers so one error doesn't kill them all immediately
 		logger.Logger.Errorw("Error Received", "error", err)
 	}
 

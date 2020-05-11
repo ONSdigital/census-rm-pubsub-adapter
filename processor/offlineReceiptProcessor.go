@@ -15,8 +15,10 @@ func NewOfflineReceiptProcessor(ctx context.Context, appConfig *config.Configura
 
 func unmarshalOfflineReceipt(data []byte) (models.PubSubMessage, error) {
 	var offlineReceipt models.OfflineReceipt
-	err := json.Unmarshal(data, &offlineReceipt)
-	if err != nil {
+	if err := json.Unmarshal(data, &offlineReceipt); err != nil {
+		return nil, err
+	}
+	if err := offlineReceipt.Validate(); err != nil {
 		return nil, err
 	}
 	return offlineReceipt, nil
@@ -32,7 +34,7 @@ func convertOfflineReceiptToRmMessage(receipt models.PubSubMessage) (*models.RmM
 			Type:          "RESPONSE_RECEIVED",
 			Source:        "RECEIPT_SERVICE",
 			Channel:       offlineReceipt.Channel,
-			DateTime:      offlineReceipt.TimeCreated.Time,
+			DateTime:      &offlineReceipt.TimeCreated.Time,
 			TransactionID: offlineReceipt.TransactionId,
 		},
 		Payload: models.RmPayload{

@@ -1,18 +1,25 @@
 package models
 
-import "time"
+import (
+	"github.com/ONSdigital/census-rm-pubsub-adapter/validate"
+	"time"
+)
 
 type EqReceiptMetadata struct {
-	TransactionId   string `json:"tx_id"`
-	QuestionnaireId string `json:"questionnaire_id"`
+	TransactionId   string `json:"tx_id" validate:"required"`
+	QuestionnaireId string `json:"questionnaire_id" validate:"required"`
 	CaseID          string `json:"caseId,omitempty"`
 }
 
 type EqReceipt struct {
-	TimeCreated time.Time         `json:"timeCreated"`
-	Metadata    EqReceiptMetadata `json:"metadata"`
+	TimeCreated *time.Time        `json:"timeCreated" validate:"required"`
+	Metadata    EqReceiptMetadata `json:"metadata" validate:"required"`
 }
 
 func (e EqReceipt) GetTransactionId() string {
 	return e.Metadata.TransactionId
+}
+
+func (e EqReceipt) Validate() error {
+	return validate.Validate.Struct(e)
 }

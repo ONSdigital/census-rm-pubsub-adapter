@@ -11,7 +11,7 @@ func TestConvertOfflineReceiptToRmMessage(t *testing.T) {
 	timeCreated, _ := time.Parse("2006-07-08T03:04:05Z", "2008-08-24T00:00:00Z")
 	hazyTimeCreated := models.HazyUtcTime{Time: timeCreated}
 	offlineReceiptMessage := models.OfflineReceipt{
-		TimeCreated:     hazyTimeCreated,
+		TimeCreated:     &hazyTimeCreated,
 		TransactionId:   "abc123xxx",
 		QuestionnaireId: "01213213213",
 		Unreceipt:       false,
@@ -23,7 +23,7 @@ func TestConvertOfflineReceiptToRmMessage(t *testing.T) {
 			Type:          "RESPONSE_RECEIVED",
 			Source:        "RECEIPT_SERVICE",
 			Channel:       "test",
-			DateTime:      timeCreated,
+			DateTime:      &timeCreated,
 			TransactionID: "abc123xxx",
 		},
 		Payload: models.RmPayload{

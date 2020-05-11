@@ -15,8 +15,10 @@ func NewQmUndeliveredProcessor(ctx context.Context, appConfig *config.Configurat
 
 func unmarshalQmUndelivered(data []byte) (models.PubSubMessage, error) {
 	var qmUndelivered models.QmUndelivered
-	err := json.Unmarshal(data, &qmUndelivered)
-	if err != nil {
+	if err := json.Unmarshal(data, &qmUndelivered); err != nil {
+		return nil, err
+	}
+	if err := qmUndelivered.Validate(); err != nil {
 		return nil, err
 	}
 	return qmUndelivered, nil
@@ -33,7 +35,7 @@ func convertQmUndeliveredToRmMessage(message models.PubSubMessage) (*models.RmMe
 			Type:          "UNDELIVERED_MAIL_REPORTED",
 			Source:        "RECEIPT_SERVICE",
 			Channel:       "QM",
-			DateTime:      qmUndelivered.DateTime.Time,
+			DateTime:      &qmUndelivered.DateTime.Time,
 			TransactionID: qmUndelivered.TransactionId,
 		},
 		Payload: models.RmPayload{
