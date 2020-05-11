@@ -1,19 +1,19 @@
 package models
 
 import (
-	"errors"
+	"github.com/ONSdigital/census-rm-pubsub-adapter/validate"
 	"time"
 )
 
 type EqReceiptMetadata struct {
-	TransactionId   string `json:"tx_id"`
-	QuestionnaireId string `json:"questionnaire_id"`
+	TransactionId   string `json:"tx_id" validate:"required"`
+	QuestionnaireId string `json:"questionnaire_id" validate:"required"`
 	CaseID          string `json:"caseId,omitempty"`
 }
 
 type EqReceipt struct {
-	TimeCreated *time.Time        `json:"timeCreated"`
-	Metadata    EqReceiptMetadata `json:"metadata"`
+	TimeCreated *time.Time        `json:"timeCreated" validate:"required"`
+	Metadata    EqReceiptMetadata `json:"metadata" validate:"required"`
 }
 
 func (e EqReceipt) GetTransactionId() string {
@@ -21,14 +21,5 @@ func (e EqReceipt) GetTransactionId() string {
 }
 
 func (e EqReceipt) Validate() error {
-	if e.GetTransactionId() == "" {
-		return errors.New("EqReceipt missing transaction ID")
-	}
-	if e.TimeCreated == nil {
-		return errors.New("EqReceipt missing timeCreated")
-	}
-	if e.Metadata.QuestionnaireId == "" {
-		return errors.New("EqReceipt missing questionnaire ID")
-	}
-	return nil
+	return validate.Validate.Struct(e)
 }

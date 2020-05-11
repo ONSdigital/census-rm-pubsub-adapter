@@ -1,11 +1,13 @@
 package models
 
-import "errors"
+import (
+	"github.com/ONSdigital/census-rm-pubsub-adapter/validate"
+)
 
 type OfflineReceipt struct {
-	TimeCreated     *HazyUtcTime `json:"dateTime"`
-	TransactionId   string       `json:"transactionId"`
-	QuestionnaireId string       `json:"questionnaireId"`
+	TimeCreated     *HazyUtcTime `json:"dateTime" validate:"required"`
+	TransactionId   string       `json:"transactionId" validate:"required"`
+	QuestionnaireId string       `json:"questionnaireId" validate:"required"`
 	Unreceipt       bool         `json:"unreceipt"`
 	Channel         string       `json:"channel"`
 }
@@ -15,14 +17,5 @@ func (o OfflineReceipt) GetTransactionId() string {
 }
 
 func (o OfflineReceipt) Validate() error {
-	if o.GetTransactionId() == "" {
-		return errors.New("OfflineReceipt missing transaction ID")
-	}
-	if o.TimeCreated == nil {
-		return errors.New("OfflineReceipt missing dateTime")
-	}
-	if o.QuestionnaireId == "" {
-		return errors.New("OfflineReceipt missing questionnaire ID")
-	}
-	return nil
+	return validate.Validate.Struct(o)
 }

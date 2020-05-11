@@ -1,11 +1,13 @@
 package models
 
-import "errors"
+import (
+	"github.com/ONSdigital/census-rm-pubsub-adapter/validate"
+)
 
 type QmUndelivered struct {
-	TransactionId   string       `json:"transactionId"`
-	DateTime        *HazyUtcTime `json:"dateTime"`
-	QuestionnaireId string       `json:"questionnaireId"`
+	TransactionId   string       `json:"transactionId" validate:"required"`
+	DateTime        *HazyUtcTime `json:"dateTime" validate:"required"`
+	QuestionnaireId string       `json:"questionnaireId" validate:"required"`
 }
 
 func (q QmUndelivered) GetTransactionId() string {
@@ -13,14 +15,5 @@ func (q QmUndelivered) GetTransactionId() string {
 }
 
 func (q QmUndelivered) Validate() error {
-	if q.GetTransactionId() == "" {
-		return errors.New("QmUndelivered missing transaction ID")
-	}
-	if q.DateTime == nil {
-		return errors.New("QmUndelivered missing dateTime")
-	}
-	if q.QuestionnaireId == "" {
-		return errors.New("QmUndelivered missing questionnaire ID")
-	}
-	return nil
+	return validate.Validate.Struct(q)
 }

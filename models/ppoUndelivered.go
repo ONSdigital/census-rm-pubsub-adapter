@@ -1,11 +1,13 @@
 package models
 
-import "errors"
+import (
+	"github.com/ONSdigital/census-rm-pubsub-adapter/validate"
+)
 
 type PpoUndelivered struct {
-	TransactionId string       `json:"transactionId"`
-	DateTime      *HazyUtcTime `json:"dateTime"`
-	CaseRef       string       `json:"caseRef"`
+	TransactionId string       `json:"transactionId" validate:"required"`
+	DateTime      *HazyUtcTime `json:"dateTime" validate:"required"`
+	CaseRef       string       `json:"caseRef" validate:"required"`
 	ProductCode   string       `json:"productCode"`
 }
 
@@ -14,14 +16,5 @@ func (p PpoUndelivered) GetTransactionId() string {
 }
 
 func (p PpoUndelivered) Validate() error {
-	if p.GetTransactionId() == "" {
-		return errors.New("PpoUndelivered missing transaction ID")
-	}
-	if p.DateTime == nil {
-		return errors.New("PpoUndelivered missing dateTime")
-	}
-	if p.CaseRef == "" {
-		return errors.New("PpoUndelivered missing case ref")
-	}
-	return nil
+	return validate.Validate.Struct(p)
 }
