@@ -7,6 +7,7 @@ import (
 	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/logger"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
+	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 )
@@ -47,7 +48,7 @@ func NewProcessor(ctx context.Context,
 	// Set up rabbit connection
 	p.RabbitConn, err = amqp.Dial(appConfig.RabbitConnectionString)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error connecting to rabbit")
 	}
 
 	p.RabbitChannel, err = p.RabbitConn.Channel()
@@ -58,7 +59,7 @@ func NewProcessor(ctx context.Context,
 	// Setup PubSub connection
 	p.PubSubClient, err = pubsub.NewClient(ctx, pubSubProject)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error settings up PubSub client")
 	}
 
 	// Setup subscription

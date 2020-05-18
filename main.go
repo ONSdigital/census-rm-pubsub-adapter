@@ -66,28 +66,28 @@ func StartProcessors(ctx context.Context, cfg *config.Configuration, errChan cha
 	// Start EQ receipt processing
 	eqReceiptProcessor, err := processor.NewEqReceiptProcessor(ctx, cfg, errChan)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Error starting eQ receipt processor")
 	}
 	processors = append(processors, eqReceiptProcessor)
 
 	// Start offline receipt processing
 	offlineReceiptProcessor, err := processor.NewOfflineReceiptProcessor(ctx, cfg, errChan)
 	if err != nil {
-		return processors, err
+		return processors, errors.Wrap(err, "Error starting offline receipt processor")
 	}
 	processors = append(processors, offlineReceiptProcessor)
 
 	// Start PPO undelivered processing
 	ppoUndeliveredProcessor, err := processor.NewPpoUndeliveredProcessor(ctx, cfg, errChan)
 	if err != nil {
-		return processors, err
+		return processors, errors.Wrap(err, "Error starting PPO undelivered processor")
 	}
 	processors = append(processors, ppoUndeliveredProcessor)
 
 	// Start QM undelivered processing
 	qmUndeliveredProcessor, err := processor.NewQmUndeliveredProcessor(ctx, cfg, errChan)
 	if err != nil {
-		return processors, err
+		return processors, errors.Wrap(err, "Error starting QM undelivered processor")
 	}
 	processors = append(processors, qmUndeliveredProcessor)
 
