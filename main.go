@@ -91,6 +91,13 @@ func StartProcessors(ctx context.Context, cfg *config.Configuration, errChan cha
 	}
 	processors = append(processors, qmUndeliveredProcessor)
 
+	// Start fulfilment confirmed processing
+	fulfilmentConfirmedProcessor, err := processor.NewFulfilmentConfirmedProcessor(ctx, cfg, errChan)
+	if err != nil {
+		return processors, errors.Wrap(err, "Error starting fulfilment confirmed processor")
+	}
+	processors = append(processors, fulfilmentConfirmedProcessor)
+
 	return processors, nil
 }
 

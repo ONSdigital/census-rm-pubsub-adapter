@@ -24,22 +24,26 @@ func TestMain(m *testing.M) {
 	runtime.GOMAXPROCS(1)
 	ctx = context.Background()
 	cfg = &config.Configuration{
-		RabbitConnectionString:     "amqp://guest:guest@localhost:7672/",
-		ReceiptRoutingKey:          "goTestReceiptQueue",
-		UndeliveredRoutingKey:      "goTestUndeliveredQueue",
-		DlqRoutingKey:              "goTestQuarantineQueue",
-		EqReceiptProject:           "project",
-		EqReceiptSubscription:      "rm-receipt-subscription",
-		EqReceiptTopic:             "eq-submission-topic",
-		OfflineReceiptProject:      "offline-project",
-		OfflineReceiptSubscription: "rm-offline-receipt-subscription",
-		OfflineReceiptTopic:        "offline-receipt-topic",
-		PpoUndeliveredProject:      "ppo-undelivered-project",
-		PpoUndeliveredTopic:        "ppo-undelivered-mail-topic",
-		PpoUndeliveredSubscription: "rm-ppo-undelivered-subscription",
-		QmUndeliveredProject:       "qm-undelivered-project",
-		QmUndeliveredTopic:         "qm-undelivered-mail-topic",
-		QmUndeliveredSubscription:  "rm-qm-undelivered-subscription",
+		RabbitConnectionString:          "amqp://guest:guest@localhost:7672/",
+		ReceiptRoutingKey:               "goTestReceiptQueue",
+		UndeliveredRoutingKey:           "goTestUndeliveredQueue",
+		FulfilmentRoutingKey:            "goTestFulfilmentConfirmedQueue",
+		DlqRoutingKey:                   "goTestQuarantineQueue",
+		EqReceiptProject:                "project",
+		EqReceiptSubscription:           "rm-receipt-subscription",
+		EqReceiptTopic:                  "eq-submission-topic",
+		OfflineReceiptProject:           "offline-project",
+		OfflineReceiptSubscription:      "rm-offline-receipt-subscription",
+		OfflineReceiptTopic:             "offline-receipt-topic",
+		PpoUndeliveredProject:           "ppo-undelivered-project",
+		PpoUndeliveredTopic:             "ppo-undelivered-mail-topic",
+		PpoUndeliveredSubscription:      "rm-ppo-undelivered-subscription",
+		QmUndeliveredProject:            "qm-undelivered-project",
+		QmUndeliveredTopic:              "qm-undelivered-mail-topic",
+		QmUndeliveredSubscription:       "rm-qm-undelivered-subscription",
+		FulfilmentConfirmedProject:      "fulfilment-confirmed-project",
+		FulfilmentConfirmedSubscription: "fulfilment-subscription",
+		FulfilmentConfirmedTopic:        "fulfilment-topic",
 	}
 	code := m.Run()
 	os.Exit(code)
@@ -65,6 +69,16 @@ func TestMessageProcessing(t *testing.T) {
 		`{"dateTime": "2008-08-24T00:00:00", "transactionId": "abc123xxx", "questionnaireId": "01213213213"}`,
 		`{"event":{"type":"UNDELIVERED_MAIL_REPORTED","source":"RECEIPT_SERVICE","channel":"QM","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"fulfilmentInformation":{"questionnaireId":"01213213213"}}}`,
 		cfg.QmUndeliveredTopic, cfg.QmUndeliveredProject, cfg.UndeliveredRoutingKey))
+
+	t.Run("Test QM fulfilment confirmation", testMessageProcessing(
+		`{"dateTime":"2019-08-03T14:30:01","questionnaireId":"1100000000112","productCode":"P_OR_H1","channel":"QM","type":"FULFILMENT_CONFIRMED","transactionId":"92971ad5-c534-48af-a8b3-92484b14ceef"}`,
+		`{"event":{"type":"FULFILMENT_CONFIRMED","source":"RECEIPT_SERVICE","channel":"QM","dateTime":"2019-08-03T14:30:01Z","transactionId":"92971ad5-c534-48af-a8b3-92484b14ceef"},"payload":{"fulfilmentInformation":{"fulfilmentCode":"P_OR_H1","questionnaireId":"1100000000112"}}}`,
+		cfg.FulfilmentConfirmedTopic, cfg.FulfilmentConfirmedProject, cfg.FulfilmentRoutingKey))
+
+	t.Run("Test PPO fulfilment confirmation", testMessageProcessing(
+		`{"dateTime":"2019-08-03T14:30:01","caseRef":"12345678","productCode":"P_OR_H1","channel":"PPO","type":"FULFILMENT_CONFIRMED","transactionId":"92971ad5-c534-48af-a8b3-92484b14ceef"}`,
+		`{"event":{"type":"FULFILMENT_CONFIRMED","source":"RECEIPT_SERVICE","channel":"PPO","dateTime":"2019-08-03T14:30:01Z","transactionId":"92971ad5-c534-48af-a8b3-92484b14ceef"},"payload":{"fulfilmentInformation":{"caseRef":"12345678","fulfilmentCode":"P_OR_H1"}}}`,
+		cfg.FulfilmentConfirmedTopic, cfg.FulfilmentConfirmedProject, cfg.FulfilmentRoutingKey))
 }
 
 func TestMessageQuarantining(t *testing.T) {
@@ -123,7 +137,7 @@ func TestStartProcessors(t *testing.T) {
 		return
 	}
 
-	if len(processors) != 4 {
+	if len(processors) != 5 {
 		t.Errorf("StartProcessors should return 4 processors, actually returned %d", len(processors))
 	}
 }
