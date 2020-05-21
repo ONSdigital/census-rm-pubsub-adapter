@@ -27,7 +27,7 @@ func (o FulfilmentConfirmed) Validate() error {
 			err = errors.New(fmt.Sprintf("Missing questionnaire ID in QM message: %T, tx_id: %q", o, o.GetTransactionId()))
 		} else if o.Channel == "PPO" && len(o.CaseRef) == 0 {
 			err = errors.New(fmt.Sprintf("Missing case ref in PPO message: %T, tx_id: %q", o, o.GetTransactionId()))
-		} else {
+		} else if o.Channel != "QM" && o.Channel != "PPO" {
 			err = errors.New(fmt.Sprintf("Unexpected channel: %T, tx_id: %q", o, o.GetTransactionId()))
 		}
 	}
