@@ -138,7 +138,7 @@ func TestStartProcessors(t *testing.T) {
 	}
 
 	if len(processors) != 5 {
-		t.Errorf("StartProcessors should return 4 processors, actually returned %d", len(processors))
+		t.Errorf("StartProcessors should return 5 processors, actually returned %d", len(processors))
 	}
 }
 
