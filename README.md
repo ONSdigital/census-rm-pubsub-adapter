@@ -36,6 +36,7 @@ QM_UNDELIVERED_SUBSCRIPTION_PROJECT=qm-undelivered-project
 PPO_UNDELIVERED_SUBSCRIPTION_PROJECT=ppo-undelivered-project
 RECEIPT_ROUTING_KEY=goTestReceiptQueue
 UNDELIVERED_ROUTING_KEY=goTestUndeliveredQueue
+FULFILMENT_CONFIRMED_PROJECT=fulfilment-project
 ```
 
 ### Config to run locally against docker dev
@@ -52,6 +53,7 @@ EQ_RECEIPT_PROJECT=project
 OFFLINE_RECEIPT_PROJECT=offline-project
 QM_UNDELIVERED_SUBSCRIPTION_PROJECT=qm-undelivered-project
 PPO_UNDELIVERED_SUBSCRIPTION_PROJECT=ppo-undelivered-project
+FULFILMENT_CONFIRMED_PROJECT=fulfilment-project
 ```
 
 ## Running the tests

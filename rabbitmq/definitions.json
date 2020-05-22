@@ -45,6 +45,15 @@
       }
     },
     {
+      "name": "goTestFulfilmentConfirmedQueue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "classic"
+      }
+    },
+    {
       "name": "goTestQuarantineQueue",
       "vhost": "/",
       "durable": true,

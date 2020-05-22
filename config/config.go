@@ -21,20 +21,24 @@ type Configuration struct {
 	ReceiptRoutingKey      string `envconfig:"RECEIPT_ROUTING_KEY"  default:"event.response.receipt"`
 	UndeliveredRoutingKey  string `envconfig:"UNDELIVERED_ROUTING_KEY"  default:"event.fulfilment.undelivered"`
 	DlqRoutingKey          string `envconfig:"DLQ_ROUTING_KEY"  default:"pubsub.quarantine"`
+	FulfilmentRoutingKey   string `envconfig:"FULFILMENT_ROUTING_KEY"  default:"event.fulfilment.confirmation"`
 
 	// PubSub
-	EqReceiptProject           string `envconfig:"EQ_RECEIPT_PROJECT" required:"true"`
-	EqReceiptSubscription      string `envconfig:"EQ_RECEIPT_SUBSCRIPTION" default:"rm-receipt-subscription"`
-	EqReceiptTopic             string `envconfig:"EQ_RECEIPT_TOPIC" default:"eq-submission-topic"`
-	OfflineReceiptProject      string `envconfig:"OFFLINE_RECEIPT_PROJECT" required:"true"`
-	OfflineReceiptSubscription string `envconfig:"OFFLINE_RECEIPT_SUBSCRIPTION" default:"rm-offline-receipt-subscription"`
-	OfflineReceiptTopic        string `envconfig:"OFFLINE_RECEIPT_TOPIC" default:"offline-receipt-topic"`
-	PpoUndeliveredProject      string `envconfig:"PPO_UNDELIVERED_SUBSCRIPTION_PROJECT" required:"true"`
-	PpoUndeliveredSubscription string `envconfig:"PPO_UNDELIVERED_SUBSCRIPTION" default:"rm-ppo-undelivered-subscription"`
-	PpoUndeliveredTopic        string `envconfig:"PPO_UNDELIVERED_TOPIC" default:"ppo-undelivered-topic"`
-	QmUndeliveredProject       string `envconfig:"QM_UNDELIVERED_SUBSCRIPTION_PROJECT" required:"true"`
-	QmUndeliveredSubscription  string `envconfig:"QM_UNDELIVERED_SUBSCRIPTION" default:"rm-qm-undelivered-subscription"`
-	QmUndeliveredTopic         string `envconfig:"QM_UNDELIVERED_TOPIC" default:"qm-undelivered-topic"`
+	EqReceiptProject                string `envconfig:"EQ_RECEIPT_PROJECT" required:"true"`
+	EqReceiptSubscription           string `envconfig:"EQ_RECEIPT_SUBSCRIPTION" default:"rm-receipt-subscription"`
+	EqReceiptTopic                  string `envconfig:"EQ_RECEIPT_TOPIC" default:"eq-submission-topic"`
+	OfflineReceiptProject           string `envconfig:"OFFLINE_RECEIPT_PROJECT" required:"true"`
+	OfflineReceiptSubscription      string `envconfig:"OFFLINE_RECEIPT_SUBSCRIPTION" default:"rm-offline-receipt-subscription"`
+	OfflineReceiptTopic             string `envconfig:"OFFLINE_RECEIPT_TOPIC" default:"offline-receipt-topic"`
+	PpoUndeliveredProject           string `envconfig:"PPO_UNDELIVERED_SUBSCRIPTION_PROJECT" required:"true"`
+	PpoUndeliveredSubscription      string `envconfig:"PPO_UNDELIVERED_SUBSCRIPTION" default:"rm-ppo-undelivered-subscription"`
+	PpoUndeliveredTopic             string `envconfig:"PPO_UNDELIVERED_TOPIC" default:"ppo-undelivered-topic"`
+	QmUndeliveredProject            string `envconfig:"QM_UNDELIVERED_SUBSCRIPTION_PROJECT" required:"true"`
+	QmUndeliveredSubscription       string `envconfig:"QM_UNDELIVERED_SUBSCRIPTION" default:"rm-qm-undelivered-subscription"`
+	QmUndeliveredTopic              string `envconfig:"QM_UNDELIVERED_TOPIC" default:"qm-undelivered-topic"`
+	FulfilmentConfirmedProject      string `envconfig:"FULFILMENT_CONFIRMED_PROJECT" required:"true"`
+	FulfilmentConfirmedSubscription string `envconfig:"FULFILMENT_CONFIRMED_SUBSCRIPTION" default:"fulfilment-subscription"`
+	FulfilmentConfirmedTopic        string `envconfig:"FULFILMENT_CONFIRMED_TOPIC" default:"fulfilment-topic"`
 }
 
 var cfg *Configuration

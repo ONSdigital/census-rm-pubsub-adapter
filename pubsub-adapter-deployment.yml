@@ -85,6 +85,11 @@ spec:
                 configMapKeyRef:
                   name: project-config
                   key: project-name
+            - name: FULFILMENT_CONFIRMED_PROJECT
+              valueFrom:
+                configMapKeyRef:
+                  name: project-config
+                  key: project-name
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: "/gcp-credentials/service-account-key.json"
             - name: RABBIT_HOST
