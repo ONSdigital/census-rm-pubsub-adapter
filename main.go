@@ -60,6 +60,13 @@ func main() {
 
 }
 
+/*
+	Plan:
+	somehow create or fiddle with integration test to temp break subscription to pubsub?
+
+ */
+
+
 func StartProcessors(ctx context.Context, cfg *config.Configuration, errChan chan error) ([]*processor.Processor, error) {
 	processors := make([]*processor.Processor, 0)
 

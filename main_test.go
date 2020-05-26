@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
+	"github.com/ONSdigital/census-rm-pubsub-adapter/processor"
 	"github.com/streadway/amqp"
 	"os"
 	"runtime"
@@ -126,6 +127,91 @@ func TestStartProcessors(t *testing.T) {
 	if len(processors) != 4 {
 		t.Errorf("StartProcessors should return 4 processors, actually returned %d", len(processors))
 	}
+}
+
+func testMessageProcessingWithProcessorsAlreadyStarted(messageToSend string, expectedRabbitMessage string, topic string,
+				project string, rabbitRoutingKey string) func(t *testing.T) {
+	return func(t *testing.T) {
+
+		rabbitConn, rabbitCh, err := connectToRabbitChannel()
+		defer rabbitCh.Close()
+		defer rabbitConn.Close()
+		if _, err := rabbitCh.QueuePurge(rabbitRoutingKey, false); err != nil {
+			t.Error(err)
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+		// When
+		if messageId, err := publishMessageToPubSub(ctx, messageToSend, topic, project); err != nil {
+			t.Errorf("PubSub publish fail, project: %s, topic: %s, id: %s, error: %s", project, topic, messageId, err)
+			return
+		}
+
+		rabbitMessage, err := getFirstMessageOnQueue(ctx, rabbitRoutingKey, rabbitCh)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		// Then
+		if rabbitMessage != expectedRabbitMessage {
+			t.Errorf("Rabbit messsage incorrect - \nexpected: %s \nactual: %s", expectedRabbitMessage, rabbitMessage)
+		}
+		cancel()
+	}
+}
+
+func TestSingleProcessorFailingOnceRestarts(t *testing.T) {
+	errChan := make(chan error)
+
+	//// Start all of the processors
+	processors, err := StartProcessors(ctx, cfg, errChan)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if len(processors) != 4 {
+		t.Errorf("StartProcessors should return 4 processors, actually returned %d", len(processors))
+	}
+
+	//Test a good msg that should pass through
+	t.Run("Test EQ receipting", testMessageProcessingWithProcessorsAlreadyStarted(
+		`{"timeCreated": "2008-08-24T00:00:00Z", "metadata": {"tx_id": "abc123xxx", "questionnaire_id": "01213213213"}}`,
+		`{"event":{"type":"RESPONSE_RECEIVED","source":"RECEIPT_SERVICE","channel":"EQ","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"response":{"questionnaireId":"01213213213","unreceipt":false}}}`,
+		cfg.EqReceiptTopic, cfg.EqReceiptProject, cfg.ReceiptRoutingKey))
+
+	//Now kill the EqReceipting one
+
+	//for _, processor := range processors {
+	//
+	//	if processor.RabbitRoutingKey == "goTestReceiptQueue" {
+	//		processor.PubSubSubscription.Delete(ctx)
+	//	}
+	//}
+	//
+	//processors, err = StartProcessors(ctx, cfg, errChan)
+	//if err != nil {
+	//	t.Error(err)
+	//	return
+	//}
+
+	t.Run("Test EQ receipting With Processor Killed", testMessageProcessingWithProcessorsAlreadyStarted(
+		`{"timeCreated": "2008-08-24T00:00:00Z", "metadata": {"tx_id": "abc123xxx", "questionnaire_id": "01213213213"}}`,
+		`{"event":{"type":"RESPONSE_RECEIVED","source":"RECEIPT_SERVICE","channel":"EQ","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"response":{"questionnaireId":"01213213213","unreceipt":false}}}`,
+		cfg.EqReceiptTopic, cfg.EqReceiptProject, cfg.ReceiptRoutingKey))
+
+
+	// We want to restart the processor, or maybe just recreate it and delete the old one?
+	eqReceiptProcessor, err := processor.NewEqReceiptProcessor(ctx, cfg, errChan)
+	processors = append(processors, eqReceiptProcessor)
+
+	t.Run("Test EQ receipting With Processor Restarted", testMessageProcessingWithProcessorsAlreadyStarted(
+		`{"timeCreated": "2008-08-24T00:00:00Z", "metadata": {"tx_id": "abc123xxx", "questionnaire_id": "01213213213"}}`,
+		`{"event":{"type":"RESPONSE_RECEIVED","source":"RECEIPT_SERVICE","channel":"EQ","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"response":{"questionnaireId":"01213213213","unreceipt":false}}}`,
+		cfg.EqReceiptTopic, cfg.EqReceiptProject, cfg.ReceiptRoutingKey))
 }
 
 func publishMessageToPubSub(ctx context.Context, msg string, topic string, project string) (id string, err error) {
