@@ -65,6 +65,13 @@ func NewProcessor(ctx context.Context,
 	// Setup subscription
 	p.PubSubSubscription = p.PubSubClient.Subscription(pubSubSubscription)
 
+	// Must set ReceiveSettings.Synchronous to false (or leave as default) to enable
+	// concurrency settings. Otherwise, NumGoroutines will be set to 1.
+	p.PubSubSubscription.ReceiveSettings.Synchronous = false
+	// NumGoroutines is the number of goroutines sub.Receive will spawn to pull messages concurrently.
+	p.PubSubSubscription.ReceiveSettings.NumGoroutines = 50
+
+
 	// Start consuming from PubSub
 	p.Logger.Infow("Launching PubSub message receiver")
 	go p.Consume(ctx)
