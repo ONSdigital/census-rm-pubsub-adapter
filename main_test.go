@@ -220,6 +220,83 @@ func TestStartProcessors(t *testing.T) {
 	}
 }
 
+func TestRabbitReconnect(t *testing.T) {
+
+	// Start up the processors normally
+	processors, err := StartProcessors(ctx, cfg, make(chan error))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Take the first processor
+	processor := processors[0]
+
+	// Set up a rabbit channel closure notification channel
+	channelErrChan := make(chan *amqp.Error)
+	processor.RabbitChannel.NotifyClose(channelErrChan)
+
+	// Check the processors rabbit channel can publish
+	if err := processor.RabbitChannel.Publish(
+		cfg.EventsExchange,
+		cfg.ReceiptRoutingKey,
+		true,
+		false,
+		amqp.Publishing{
+			ContentType:  "application/json",
+			Body:         []byte(`{"test":"message should publish before"}`),
+			DeliveryMode: 2, // 2 = persistent delivery mode
+		}); err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Break the channel by publishing a mandatory message that can't be routed
+	if err := processor.RabbitChannel.Publish(
+		"this_exchange_should_not_exist",
+		cfg.ReceiptRoutingKey,
+		true,
+		false,
+		amqp.Publishing{
+			ContentType:  "application/json",
+			Body:         []byte(`{"test":"message should fail"}`),
+			DeliveryMode: 2, // 2 = persistent delivery mode
+		}); err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Wait for the unpublishable message to kill the channel with a timeout
+	select {
+	case <-time.After(3 * time.Second):
+		t.Error("Timed out waiting for induced rabbit channel closure")
+	case <-channelErrChan:
+	}
+
+	// Try to successfully publish a message within the timeout
+	for {
+		select {
+		case <-time.After(3 * time.Second):
+			t.Error("Failed to publish message on processor connection within the timeout")
+			return
+		default:
+			err := processor.RabbitChannel.Publish(
+				cfg.EventsExchange,
+				cfg.ReceiptRoutingKey,
+				true,
+				false,
+				amqp.Publishing{
+					ContentType:  "application/json",
+					Body:         []byte(`{"test":"message should publish after"}`),
+					DeliveryMode: 2, // 2 = persistent delivery mode
+				})
+			if err == nil {
+				return
+			}
+		}
+	}
+}
+
 func publishMessageToPubSub(ctx context.Context, msg string, topic string, project string) (id string, err error) {
 	pubSubClient, err := pubsub.NewClient(ctx, project)
 	if err != nil {
