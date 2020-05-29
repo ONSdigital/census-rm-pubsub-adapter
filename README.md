@@ -18,6 +18,7 @@ EQ_RECEIPT_PROJECT
 OFFLINE_RECEIPT_PROJECT
 QM_UNDELIVERED_SUBSCRIPTION_PROJECT
 PPO_UNDELIVERED_SUBSCRIPTION_PROJECT
+QUARANTINE_MESSAGE_URL
 ```
 
 ### Config to run locally against docker-compose dependencies
@@ -37,6 +38,7 @@ PPO_UNDELIVERED_SUBSCRIPTION_PROJECT=ppo-undelivered-project
 RECEIPT_ROUTING_KEY=goTestReceiptQueue
 UNDELIVERED_ROUTING_KEY=goTestUndeliveredQueue
 FULFILMENT_CONFIRMED_PROJECT=fulfilment-project
+QUARANTINE_MESSAGE_URL=http://httpbin.org/post
 ```
 
 ### Config to run locally against docker dev
@@ -53,7 +55,8 @@ EQ_RECEIPT_PROJECT=project
 OFFLINE_RECEIPT_PROJECT=offline-project
 QM_UNDELIVERED_SUBSCRIPTION_PROJECT=qm-undelivered-project
 PPO_UNDELIVERED_SUBSCRIPTION_PROJECT=ppo-undelivered-project
-FULFILMENT_CONFIRMED_PROJECT=fulfilment-project
+FULFILMENT_CONFIRMED_PROJECT=fulfilment-confirmed-project
+QUARANTINE_MESSAGE_URL=http://localhost:8666/storeskippedmessage
 ```
 
 ## Running the tests
