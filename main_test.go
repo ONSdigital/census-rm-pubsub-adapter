@@ -29,6 +29,7 @@ func TestMain(m *testing.M) {
 	runtime.GOMAXPROCS(1)
 	ctx = context.Background()
 	cfg = &config.Configuration{
+		PublishersPerProcessor:          1,
 		RabbitConnectionString:          "amqp://guest:guest@localhost:7672/",
 		ReceiptRoutingKey:               "goTestReceiptQueue",
 		UndeliveredRoutingKey:           "goTestUndeliveredQueue",

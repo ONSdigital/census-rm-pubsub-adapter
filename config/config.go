@@ -7,9 +7,10 @@ import (
 )
 
 type Configuration struct {
-	ReadinessFilePath    string `envconfig:"READINESS_FILE_PATH" default:"/tmp/pubsub-adapter-ready"`
-	LogLevel             string `envconfig:"LOG_LEVEL" default:"ERROR"`
-	QuarantineMessageUrl string `envconfig:"QUARANTINE_MESSAGE_URL"  required:"true"`
+	ReadinessFilePath      string `envconfig:"READINESS_FILE_PATH" default:"/tmp/pubsub-adapter-ready"`
+	LogLevel               string `envconfig:"LOG_LEVEL" default:"ERROR"`
+	QuarantineMessageUrl   string `envconfig:"QUARANTINE_MESSAGE_URL"  required:"true"`
+	PublishersPerProcessor int    `envconfig:"PUBLISHERS_PER_PROCESSOR" default:"20"`
 
 	// Rabbit
 	RabbitHost             string `envconfig:"RABBIT_HOST" required:"true"`
