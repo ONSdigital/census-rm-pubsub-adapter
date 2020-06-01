@@ -233,8 +233,6 @@ func TestRabbitReconnect(t *testing.T) {
 	// Take the first processor
 	processor := processors[0]
 
-	// Set up a notify close on all the processors rabbit channels
-	channelErrChan := make(chan *amqp.Error)
 
 	time.Sleep(1 * time.Second)
 
@@ -245,6 +243,7 @@ func TestRabbitReconnect(t *testing.T) {
 			channel = processor.RabbitChannels[0]
 		}
 	}
+	channelErrChan := make(chan *amqp.Error)
 	channel.NotifyClose(channelErrChan)
 
 	// Check the processors rabbit channel can publish
