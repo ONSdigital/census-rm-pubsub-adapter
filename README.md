@@ -39,7 +39,10 @@ RECEIPT_ROUTING_KEY=goTestReceiptQueue
 UNDELIVERED_ROUTING_KEY=goTestUndeliveredQueue
 FULFILMENT_CONFIRMED_PROJECT=fulfilment-project
 QUARANTINE_MESSAGE_URL=http://httpbin.org/post
+RABBIT_EXCHANGE=
 ```
+
+NB: `RABBIT_EXCHANGE` is intentionally an empty string to use the rabbit default exchange
 
 ### Config to run locally against docker dev
 

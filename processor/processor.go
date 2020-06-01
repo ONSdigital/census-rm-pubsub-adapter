@@ -49,14 +49,8 @@ func NewProcessor(ctx context.Context,
 	p.ErrChan = errChan
 	p.Logger = logger.Logger.With("subscription", pubSubSubscription)
 
-	// Set up rabbit connection
-	p.RabbitConn, err = amqp.Dial(appConfig.RabbitConnectionString)
-	if err != nil {
-		return nil, errors.Wrap(err, "error connecting to rabbit")
-	}
-
-	p.RabbitChannel, err = p.RabbitConn.Channel()
-	if err != nil {
+	// Setup Rabbit
+	if err := p.initRabbit(); err != nil {
 		return nil, err
 	}
 
@@ -74,6 +68,52 @@ func NewProcessor(ctx context.Context,
 	go p.Consume(ctx)
 
 	return p, nil
+}
+
+func (p *Processor) initRabbit() error {
+	if err := p.initRabbitConnection(); err != nil {
+		return err
+	}
+
+	if err := p.initRabbitChannel(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *Processor) initRabbitConnection() error {
+	var err error
+
+	// Open the rabbit connection
+	p.RabbitConn, err = amqp.Dial(p.Config.RabbitConnectionString)
+	if err != nil {
+		return errors.Wrap(err, "error connecting to rabbit")
+	}
+	return nil
+}
+
+func (p *Processor) initRabbitChannel() error {
+	var err error
+
+	// Open the rabbit channel
+	p.RabbitChannel, err = p.RabbitConn.Channel()
+	if err != nil {
+		return errors.Wrap(err, "error opening rabbit channel")
+	}
+
+	// Set up handler to attempt to reopen channel on channel close
+	// Listen for errors on the rabbit channel to handle both channel specific and connection wide exceptions
+	channelErrChan := make(chan *amqp.Error)
+	go func() {
+		channelErr := <-channelErrChan
+
+		// TODO handle reconnecting in graceful processor restart rather than a direct call to reinitialize here
+		p.Logger.Errorw("received rabbit channel error, reconnecting", "error", channelErr)
+		_ = p.initRabbit()
+	}()
+	p.RabbitChannel.NotifyClose(channelErrChan)
+
+	return nil
 }
 
 func (p *Processor) Consume(ctx context.Context) {
@@ -122,7 +162,7 @@ func (p *Processor) publishEventToRabbit(message *models.RmMessage, routingKey s
 		return err
 	}
 
-	err = p.RabbitChannel.Publish(
+	if err := p.RabbitChannel.Publish(
 		exchange,
 		routingKey, // routing key (the queue)
 		false,      // mandatory
@@ -131,8 +171,7 @@ func (p *Processor) publishEventToRabbit(message *models.RmMessage, routingKey s
 			ContentType:  "application/json",
 			Body:         byteMessage,
 			DeliveryMode: 2, // 2 = persistent delivery mode
-		})
-	if err != nil {
+		}); err != nil {
 		return err
 	}
 
