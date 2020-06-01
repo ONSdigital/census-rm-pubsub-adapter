@@ -126,15 +126,14 @@ func testMessageQuarantining(messageToSend string, testDescription string, t *te
 		return
 	}
 
-	if assertEqual("application/json", quarantineBody.ContentType, "Dodgy content type", t) {
-		return
-	}
-
-	if assertEqual("Error unmarshalling message", quarantineBody.ExceptionClass, "Dodgy exception class", t) {
-		return
-	}
-
-	if assertEqual(1, len(quarantineBody.Headers), "Dodgy headers", t) {
+	if !assertEqual("application/json", quarantineBody.ContentType, "Dodgy content type", t) ||
+		!assertEqual("Error unmarshalling message", quarantineBody.ExceptionClass, "Dodgy exception class", t) ||
+		!assertEqual(1, len(quarantineBody.Headers), "Dodgy headers", t) ||
+		!assertEqual(64, len(quarantineBody.MessageHash), "Dodgy message hash", t) ||
+		!assertEqual(messageToSend, string(quarantineBody.MessagePayload), "Dodgy message payload", t) ||
+		!assertEqual(cfg.EqReceiptSubscription, quarantineBody.Queue, "Dodgy quarantine queue", t) ||
+		!assertEqual("none", quarantineBody.RoutingKey, "Dodgy routing key", t) ||
+		!assertEqual("Pubsub Adapter", quarantineBody.Service, "Dodgy routing key", t) {
 		return
 	}
 
@@ -142,35 +141,15 @@ func testMessageQuarantining(messageToSend string, testDescription string, t *te
 		t.Errorf("Dodgy pubSubId header, expected non-zero length")
 		return
 	}
-
-	if assertEqual(64, len(quarantineBody.MessageHash), "Dodgy message hash", t) {
-		return
-	}
-
-	if assertEqual(messageToSend, string(quarantineBody.MessagePayload), "Dodgy message payload", t) {
-		return
-	}
-
-	if assertEqual(cfg.EqReceiptSubscription, quarantineBody.Queue, "Dodgy quarantine queue", t) {
-		return
-	}
-
-	if assertEqual("none", quarantineBody.RoutingKey, "Dodgy routing key", t) {
-		return
-	}
-
-	if assertEqual("Pubsub Adapter", quarantineBody.Service, "Dodgy routing key", t) {
-		return
-	}
 }
 
 func assertEqual(expected interface{}, actual interface{}, feedback string, t *testing.T) bool {
 	if expected != actual {
 		t.Errorf("%v, expected %v, actual %v", feedback, expected, actual)
-		return true
+		return false
 	}
 
-	return false
+	return true
 }
 
 func testMessageProcessing(messageToSend string, expectedRabbitMessage string, topic string, project string, rabbitRoutingKey string) func(t *testing.T) {

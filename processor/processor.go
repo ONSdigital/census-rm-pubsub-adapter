@@ -13,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
-	"io/ioutil"
 	"net/http"
 )
 
@@ -161,12 +160,12 @@ func (p *Processor) quarantineMessage(message *pubsub.Message) error {
 		Headers:        headers,
 	}
 
-	jsonValue, _ := json.Marshal(msgToQuarantine)
-	response, err := http.Post(p.Config.QuarantineMessageUrl, "application/json", bytes.NewBuffer(jsonValue))
+	jsonValue, err := json.Marshal(msgToQuarantine)
 	if err != nil {
 		return err
 	}
-	_, err = ioutil.ReadAll(response.Body)
+
+	_, err = http.Post(p.Config.QuarantineMessageUrl, "application/json", bytes.NewBuffer(jsonValue))
 	if err != nil {
 		return err
 	}
