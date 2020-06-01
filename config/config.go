@@ -7,8 +7,9 @@ import (
 )
 
 type Configuration struct {
-	ReadinessFilePath string `envconfig:"READINESS_FILE_PATH" default:"/tmp/pubsub-adapter-ready"`
-	LogLevel          string `envconfig:"LOG_LEVEL" default:"ERROR"`
+	ReadinessFilePath    string `envconfig:"READINESS_FILE_PATH" default:"/tmp/pubsub-adapter-ready"`
+	LogLevel             string `envconfig:"LOG_LEVEL" default:"ERROR"`
+	QuarantineMessageUrl string `envconfig:"QUARANTINE_MESSAGE_URL"  required:"true"`
 
 	// Rabbit
 	RabbitHost             string `envconfig:"RABBIT_HOST" required:"true"`
@@ -20,7 +21,6 @@ type Configuration struct {
 	EventsExchange         string `envconfig:"RABBIT_EXCHANGE"  default:"events"`
 	ReceiptRoutingKey      string `envconfig:"RECEIPT_ROUTING_KEY"  default:"event.response.receipt"`
 	UndeliveredRoutingKey  string `envconfig:"UNDELIVERED_ROUTING_KEY"  default:"event.fulfilment.undelivered"`
-	DlqRoutingKey          string `envconfig:"DLQ_ROUTING_KEY"  default:"pubsub.quarantine"`
 	FulfilmentRoutingKey   string `envconfig:"FULFILMENT_ROUTING_KEY"  default:"event.fulfilment.confirmation"`
 
 	// PubSub

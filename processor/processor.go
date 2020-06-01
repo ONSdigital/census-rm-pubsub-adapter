@@ -1,15 +1,19 @@
 package processor
 
 import (
+	"bytes"
 	"cloud.google.com/go/pubsub"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/logger"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
+	"net/http"
 )
 
 type messageUnmarshaller func([]byte) (models.PubSubMessage, error)
@@ -85,7 +89,7 @@ func (p *Processor) Process(_ context.Context, msg *pubsub.Message) {
 	messageReceived, err := p.unmarshallMessage(msg.Data)
 	if err != nil {
 		ctxLogger.Errorw("Error unmarshalling message, quarantining", "error", err, "data", string(msg.Data))
-		err = p.quarantineMessageInRabbit(msg)
+		err = p.quarantineMessage(msg)
 		if err != nil {
 			ctxLogger.Errorw("Error quarantining bad message, nacking", "error", err, "data", string(msg.Data))
 			msg.Nack()
@@ -136,29 +140,37 @@ func (p *Processor) publishEventToRabbit(message *models.RmMessage, routingKey s
 	return nil
 }
 
-func (p *Processor) quarantineMessageInRabbit(message *pubsub.Message) error {
-	headers := amqp.Table{
+func (p *Processor) quarantineMessage(message *pubsub.Message) error {
+	headers := map[string]string{
 		"pubSubId": message.ID,
 	}
+
 	for key, value := range message.Attributes {
 		headers[key] = value
 	}
-	err := p.RabbitChannel.Publish(
-		"",                     // empty string for the default exchange
-		p.Config.DlqRoutingKey, // routing key (the queue)
-		false,                  // immediate
-		false,                  // immediate
-		amqp.Publishing{
-			ContentType:  "application/json",
-			Body:         message.Data,
-			Headers:      headers,
-			DeliveryMode: 2, // 2 = persistent delivery mode
-		})
+
+	msgToQuarantine := models.MessageToQuarantine{
+		MessageHash:    fmt.Sprintf("%x", sha256.Sum256(message.Data)),
+		MessagePayload: message.Data,
+		Service:        "Pubsub Adapter",
+		Queue:          p.PubSubSubscription.ID(),
+		ExceptionClass: "Error unmarshalling message",
+		RoutingKey:     "none",
+		ContentType:    "application/json",
+		Headers:        headers,
+	}
+
+	jsonValue, err := json.Marshal(msgToQuarantine)
 	if err != nil {
 		return err
 	}
 
-	p.Logger.Debugw("Quarantined message", "DlqRoutingKey", p.Config.DlqRoutingKey, "data", string(message.Data))
+	_, err = http.Post(p.Config.QuarantineMessageUrl, "application/json", bytes.NewBuffer(jsonValue))
+	if err != nil {
+		return err
+	}
+
+	p.Logger.Debugw("Quarantined message", "data", string(message.Data))
 	return nil
 }
 

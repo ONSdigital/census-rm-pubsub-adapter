@@ -7,9 +7,14 @@ package main
 import (
 	"cloud.google.com/go/pubsub"
 	"context"
+	"encoding/json"
 	"errors"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
+	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 	"github.com/streadway/amqp"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"runtime"
 	"testing"
@@ -28,7 +33,6 @@ func TestMain(m *testing.M) {
 		ReceiptRoutingKey:               "goTestReceiptQueue",
 		UndeliveredRoutingKey:           "goTestUndeliveredQueue",
 		FulfilmentRoutingKey:            "goTestFulfilmentConfirmedQueue",
-		DlqRoutingKey:                   "goTestQuarantineQueue",
 		EqReceiptProject:                "project",
 		EqReceiptSubscription:           "rm-receipt-subscription",
 		EqReceiptTopic:                  "eq-submission-topic",
@@ -81,16 +85,71 @@ func TestMessageProcessing(t *testing.T) {
 		cfg.FulfilmentConfirmedTopic, cfg.FulfilmentConfirmedProject, cfg.FulfilmentRoutingKey))
 }
 
-func TestMessageQuarantining(t *testing.T) {
-	t.Run("Test bad non JSON message is quarantined", testMessageProcessing(
-		`bad_message`,
-		`bad_message`,
-		cfg.EqReceiptTopic, cfg.EqReceiptProject, cfg.DlqRoutingKey))
+func TestMessageQuarantiningBadJson(t *testing.T) {
+	testMessageQuarantining("bad_message", "Test bad non JSON message is quarantined", t)
+}
 
-	t.Run("Test bad message missing transaction ID is quarantined", testMessageProcessing(
-		`{"thisMessage": "is_missing_tx_id"}`,
-		`{"thisMessage": "is_missing_tx_id"}`,
-		cfg.EqReceiptTopic, cfg.EqReceiptProject, cfg.DlqRoutingKey))
+func TestMessageQuarantiningMissingTxnId(t *testing.T) {
+	testMessageQuarantining(`{"thisMessage": "is_missing_tx_id"}`, "Test bad message missing transaction ID is quarantined", t)
+}
+
+func testMessageQuarantining(messageToSend string, testDescription string, t *testing.T) {
+	var requests []*http.Request
+	var requestBody []byte
+
+	mockResult := "Success!"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		w.Write([]byte(mockResult))
+		requests = append(requests, r)
+		requestBody, _ = ioutil.ReadAll(r.Body)
+	}))
+	defer srv.Close()
+
+	cfg.QuarantineMessageUrl = srv.URL
+
+	t.Run(testDescription, testMessageProcessingQuarantine(
+		messageToSend,
+		cfg.EqReceiptTopic, cfg.EqReceiptProject))
+
+	time.Sleep(1 * time.Second)
+
+	if len(requests) != 1 {
+		t.Errorf("Unexpected number of calls to Exception Manager")
+		return
+	}
+
+	var quarantineBody models.MessageToQuarantine
+	err := json.Unmarshal(requestBody, &quarantineBody)
+	if err != nil {
+		t.Errorf("Could not decode request body sent to Exception Manager")
+		return
+	}
+
+	if !assertEqual("application/json", quarantineBody.ContentType, "Dodgy content type", t) ||
+		!assertEqual("Error unmarshalling message", quarantineBody.ExceptionClass, "Dodgy exception class", t) ||
+		!assertEqual(1, len(quarantineBody.Headers), "Dodgy headers", t) ||
+		!assertEqual(64, len(quarantineBody.MessageHash), "Dodgy message hash", t) ||
+		!assertEqual(messageToSend, string(quarantineBody.MessagePayload), "Dodgy message payload", t) ||
+		!assertEqual(cfg.EqReceiptSubscription, quarantineBody.Queue, "Dodgy quarantine queue", t) ||
+		!assertEqual("none", quarantineBody.RoutingKey, "Dodgy routing key", t) ||
+		!assertEqual("Pubsub Adapter", quarantineBody.Service, "Dodgy routing key", t) {
+		return
+	}
+
+	if len(quarantineBody.Headers["pubSubId"]) == 0 {
+		t.Errorf("Dodgy pubSubId header, expected non-zero length")
+		return
+	}
+}
+
+func assertEqual(expected interface{}, actual interface{}, feedback string, t *testing.T) bool {
+	if expected != actual {
+		t.Errorf("%v, expected %v, actual %v", feedback, expected, actual)
+		return false
+	}
+
+	return true
 }
 
 func testMessageProcessing(messageToSend string, expectedRabbitMessage string, topic string, project string, rabbitRoutingKey string) func(t *testing.T) {
@@ -126,6 +185,25 @@ func testMessageProcessing(messageToSend string, expectedRabbitMessage string, t
 		if rabbitMessage != expectedRabbitMessage {
 			t.Errorf("Rabbit messsage incorrect - \nexpected: %s \nactual: %s", expectedRabbitMessage, rabbitMessage)
 		}
+		cancel()
+	}
+}
+
+func testMessageProcessingQuarantine(messageToSend string, topic string, project string) func(t *testing.T) {
+	return func(t *testing.T) {
+		if _, err := StartProcessors(ctx, cfg, make(chan error)); err != nil {
+			t.Error(err)
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+		// When
+		if messageId, err := publishMessageToPubSub(ctx, messageToSend, topic, project); err != nil {
+			t.Errorf("PubSub publish fail, project: %s, topic: %s, id: %s, error: %s", project, topic, messageId, err)
+			return
+		}
+
 		cancel()
 	}
 }
