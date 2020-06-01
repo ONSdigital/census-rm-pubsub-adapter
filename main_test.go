@@ -233,9 +233,6 @@ func TestRabbitReconnect(t *testing.T) {
 	// Take the first processor
 	processor := processors[0]
 
-
-	time.Sleep(1 * time.Second)
-
 	// Pick one of the processors rabbit channels
 	var channel *amqp.Channel
 	for channel == nil {
