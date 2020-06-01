@@ -109,10 +109,7 @@ func (p *Processor) initRabbitChannel(cancelFunc context.CancelFunc) (*amqp.Chan
 		channelErr := <-channelErrChan
 
 		// TODO handle reconnecting in graceful processor restart rather than a direct call to reinitialize here
-		p.Logger.Errorw("received rabbit channel error, reconnecting", "error", channelErr)
-
-		// Cancel the publishers via the context
-		//_ = channel.Close()
+		p.Logger.Errorw("received rabbit channel error", "error", channelErr)
 		cancelFunc()
 	}()
 	channel.NotifyClose(channelErrChan)
@@ -126,6 +123,8 @@ func (p *Processor) startPublishers(ctx context.Context, publisherCancel context
 	if err := p.initRabbitConnection(); err != nil {
 		return
 	}
+
+	p.RabbitChannels = make([]*amqp.Channel, 0)
 
 	for i := 0; i < p.Config.PublishersPerProcessor; i++ {
 
@@ -149,7 +148,12 @@ func (p *Processor) ManagePublishers(ctx context.Context) {
 			// Use a publisher context to restart publishers on rabbit connection or channel errors
 			// TODO replace this with graceful processor restarting
 			publisherCtx, publisherCancel = context.WithCancel(context.Background())
-			p.Logger.Debug("RESTARTING PUBLISHERS")
+			p.Logger.Info("Restarting publishers")
+
+			// Tidy up the current connection and any open channels
+			p.CloseRabbit(true)
+
+			// Restart publishers
 			p.startPublishers(ctx, publisherCancel)
 		case <-ctx.Done():
 			return
@@ -277,13 +281,15 @@ func (p *Processor) quarantineMessage(message *pubsub.Message) error {
 	return nil
 }
 
-func (p *Processor) CloseRabbit() {
+func (p *Processor) CloseRabbit(errOk bool) {
 	for _, channel := range p.RabbitChannels {
-		if err := channel.Close(); err != nil {
-			p.Logger.Errorw("Error closing rabbit channel during shutdown of processor", "error", err)
+		if err := channel.Close(); err != nil && !errOk {
+			p.Logger.Errorw("Error closing rabbit channel", "error", err)
 		}
 	}
-	if err := p.RabbitConn.Close(); err != nil {
-		p.Logger.Errorw("Error closing rabbit connection during shutdown of processor", "error", err)
+
+	if err := p.RabbitConn.Close(); err != nil && !errOk {
+		p.Logger.Errorw("Error closing rabbit connection ", "error", err)
 	}
+
 }
