@@ -252,6 +252,9 @@ func TestRabbitReconnect(t *testing.T) {
 	}
 
 	// Break the channel by publishing a mandatory message that can't be routed
+	// NB: This is not a typical scenario this feature is designed around as the app or rabbit would have to be
+	// mis-configured for this to occur, and the channel closing is only an undesirable side effect.
+	// It is, however, the only viable way of inducing a channel close that I could think of using to exercise this code.
 	if err := processor.RabbitChannel.Publish(
 		"this_exchange_should_not_exist",
 		cfg.ReceiptRoutingKey,

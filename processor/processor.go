@@ -106,6 +106,8 @@ func (p *Processor) initRabbitChannel() error {
 	channelErrChan := make(chan *amqp.Error)
 	go func() {
 		channelErr := <-channelErrChan
+
+		// TODO handle reconnecting in graceful processor restart rather than a direct call to reinitialize here
 		p.Logger.Errorw("received rabbit channel error, reconnecting", "error", channelErr)
 		_ = p.initRabbit()
 	}()
