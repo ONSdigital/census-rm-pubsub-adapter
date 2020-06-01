@@ -28,6 +28,7 @@ type OutboundMessage struct {
 type Processor struct {
 	RabbitConn         *amqp.Connection
 	RabbitRoutingKey   string
+	RabbitChannels     []*amqp.Channel
 	OutBoundMsgChan    chan *OutboundMessage
 	Config             *config.Configuration
 	PubSubClient       *pubsub.Client
@@ -52,12 +53,9 @@ func NewProcessor(ctx context.Context,
 	p.convertMessage = messageConverter
 	p.unmarshallMessage = messageUnmarshaller
 	p.ErrChan = errChan
+	p.OutBoundMsgChan = make(chan *OutboundMessage)
+	p.RabbitChannels = make([]*amqp.Channel, 0)
 	p.Logger = logger.Logger.With("subscription", pubSubSubscription)
-
-	// Setup Rabbit
-	if err := p.initRabbit(); err != nil {
-		return nil, err
-	}
 
 	// Setup PubSub connection
 	p.PubSubClient, err = pubsub.NewClient(ctx, pubSubProject)
@@ -72,25 +70,13 @@ func NewProcessor(ctx context.Context,
 	p.Logger.Infow("Launching PubSub message receiver")
 	go p.Consume(ctx)
 
-	publisherCtx, publisherCancel := context.WithCancel(ctx)
-	go p.ManagePublishers(ctx, publisherCtx, publisherCancel)
+	go p.ManagePublishers(ctx)
 
 	return p, nil
 }
 
-func (p *Processor) initRabbit() error {
-	p.Logger.Debug("Initialising rabbit connection")
-	if err := p.initRabbitConnection(); err != nil {
-		return err
-	}
-
-	//if err := p.initRabbitChannel(); err != nil {
-	//	return err
-	//}
-	return nil
-}
-
 func (p *Processor) initRabbitConnection() error {
+	p.Logger.Debug("Initialising rabbit connection")
 	var err error
 
 	// Open the rabbit connection
@@ -106,7 +92,7 @@ func (p *Processor) initRabbitChannel(cancelFunc context.CancelFunc) (*amqp.Chan
 	var channel *amqp.Channel
 
 	// Open the rabbit channel
-	p.Logger.Debug("Initialising rabbit channel")
+	p.Logger.Debugf("Initialising rabbit channel no. %d", len(p.RabbitChannels)+1)
 	channel, err = p.RabbitConn.Channel()
 	if err != nil {
 		return nil, errors.Wrap(err, "error opening rabbit channel")
@@ -130,37 +116,41 @@ func (p *Processor) initRabbitChannel(cancelFunc context.CancelFunc) (*amqp.Chan
 		cancelFunc()
 	}()
 	channel.NotifyClose(channelErrChan)
+	p.RabbitChannels = append(p.RabbitChannels, channel)
 
 	return channel, nil
 }
 
 func (p *Processor) startPublishers(ctx context.Context, publisherCancel context.CancelFunc) {
-	if err := p.initRabbit(); err != nil {
+	// Setup one rabbit connection
+	if err := p.initRabbitConnection(); err != nil {
 		return
 	}
-	i := 0
-	for i < p.Config.PublishersPerProcessor {
 
+	for i := 0; i < p.Config.PublishersPerProcessor; i++ {
+
+		// Open a rabbit channel for each publisher worker
 		channel, err := p.initRabbitChannel(publisherCancel)
 		if err != nil {
 			return
 		}
 		go p.Publish(ctx, channel)
-
-		i++
 	}
 }
 
-func (p *Processor) ManagePublishers(ctx context.Context, publisherCtx context.Context, publisherCancel context.CancelFunc) {
+func (p *Processor) ManagePublishers(ctx context.Context) {
 
+	publisherCtx, publisherCancel := context.WithCancel(context.Background())
 	p.startPublishers(ctx, publisherCancel)
 
 	for {
 		select {
 		case <-publisherCtx.Done():
-			publisherCtx, publisherCancel = context.WithCancel(ctx)
+			// Use a publisher context to restart publishers on rabbit connection or channel errors
+			// TODO replace this with graceful processor restarting
+			publisherCtx, publisherCancel = context.WithCancel(context.Background())
+			p.Logger.Debug("RESTARTING PUBLISHERS")
 			p.startPublishers(ctx, publisherCancel)
-
 		case <-ctx.Done():
 			return
 		}
@@ -171,41 +161,23 @@ func (p *Processor) Publish(ctx context.Context, channel *amqp.Channel) {
 	for {
 		select {
 		case outboundMessage := <-p.OutBoundMsgChan:
-			if outboundMessage.EventMessage != nil {
 
-				// Publish good messages
-				ctxLogger := p.Logger.With("transactionId", outboundMessage.EventMessage.Event.TransactionID)
-				if err := p.publishEventToRabbit(outboundMessage.EventMessage, p.RabbitRoutingKey, p.Config.EventsExchange, channel); err != nil {
-					ctxLogger.Errorw("Failed to publish message", "error", err)
-					outboundMessage.SourceMessage.Nack()
-					if err := channel.TxRollback(); err != nil {
-						ctxLogger.Errorw("Error rolling back rabbit transaction after failed message publish", "error", err)
-					}
-					return
+			// Publish good messages
+			ctxLogger := p.Logger.With("transactionId", outboundMessage.EventMessage.Event.TransactionID)
+			if err := p.publishEventToRabbit(outboundMessage.EventMessage, p.RabbitRoutingKey, p.Config.EventsExchange, channel); err != nil {
+				ctxLogger.Errorw("Failed to publish message", "error", err)
+				outboundMessage.SourceMessage.Nack()
+				if err := channel.TxRollback(); err != nil {
+					ctxLogger.Errorw("Error rolling back rabbit transaction after failed message publish", "error", err)
 				}
-				if err := channel.TxCommit(); err != nil {
-					ctxLogger.Errorw("Failed to commit transaction to publish message", "error", err)
-					p.OutBoundMsgChan <- outboundMessage
-					return
-				}
-			} else {
-
-				// Quarantine bad messages
-				ctxLogger := p.Logger.With("msgId", outboundMessage.SourceMessage.ID)
-				if err := p.quarantineMessageInRabbit(outboundMessage.SourceMessage, channel); err != nil {
-					ctxLogger.Errorw("Failed to publish quarantine message", "error", err)
-					outboundMessage.SourceMessage.Nack()
-					if err := channel.TxRollback(); err != nil {
-						ctxLogger.Errorw("Error rolling back rabbit transaction after failed quarantine message publish", "error", err)
-					}
-					return
-				}
-				if err := channel.TxCommit(); err != nil {
-					ctxLogger.Errorw("Failed to commit transaction to quarantine message", "error", err)
-					p.OutBoundMsgChan <- outboundMessage
-					return
-				}
+				return
 			}
+			if err := channel.TxCommit(); err != nil {
+				ctxLogger.Errorw("Failed to commit transaction to publish message", "error", err)
+				p.OutBoundMsgChan <- outboundMessage
+				return
+			}
+
 			outboundMessage.SourceMessage.Ack()
 
 		case <-ctx.Done():
@@ -227,14 +199,13 @@ func (p *Processor) Process(_ context.Context, msg *pubsub.Message) {
 	messageReceived, err := p.unmarshallMessage(msg.Data)
 	if err != nil {
 		ctxLogger.Errorw("Error unmarshalling message, quarantining", "error", err, "data", string(msg.Data))
-		err = p.quarantineMessage(msg)
-		if err != nil {
+		if err := p.quarantineMessage(msg); err != nil {
 			ctxLogger.Errorw("Error quarantining bad message, nacking", "error", err, "data", string(msg.Data))
 			msg.Nack()
-		} else {
-			ctxLogger.Debugw("Acking quarantined message", "msgData", string(msg.Data))
-			msg.Ack()
+			return
 		}
+		ctxLogger.Debugw("Acking quarantined message", "msgData", string(msg.Data))
+		msg.Ack()
 		return
 	}
 	ctxLogger = ctxLogger.With("transactionId", messageReceived.GetTransactionId())
@@ -307,6 +278,11 @@ func (p *Processor) quarantineMessage(message *pubsub.Message) error {
 }
 
 func (p *Processor) CloseRabbit() {
+	for _, channel := range p.RabbitChannels {
+		if err := channel.Close(); err != nil {
+			p.Logger.Errorw("Error closing rabbit channel during shutdown of processor", "error", err)
+		}
+	}
 	if err := p.RabbitConn.Close(); err != nil {
 		p.Logger.Errorw("Error closing rabbit connection during shutdown of processor", "error", err)
 	}
