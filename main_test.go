@@ -86,6 +86,43 @@ func TestMessageProcessing(t *testing.T) {
 		cfg.FulfilmentConfirmedTopic, cfg.FulfilmentConfirmedProject, cfg.FulfilmentRoutingKey))
 }
 
+func testMessageProcessing(messageToSend string, expectedRabbitMessage string, topic string, project string, rabbitRoutingKey string) func(t *testing.T) {
+	return func(t *testing.T) {
+		if _, err := StartProcessors(ctx, cfg, make(chan error)); err != nil {
+			t.Error(err)
+			return
+		}
+
+		rabbitConn, rabbitCh, err := connectToRabbitChannel()
+		defer rabbitCh.Close()
+		defer rabbitConn.Close()
+		if _, err := rabbitCh.QueuePurge(rabbitRoutingKey, false); err != nil {
+			t.Error(err)
+			return
+		}
+
+		timeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		// When
+		if messageId, err := publishMessageToPubSub(timeout, messageToSend, topic, project); err != nil {
+			t.Errorf("PubSub publish fail, project: %s, topic: %s, id: %s, error: %s", project, topic, messageId, err)
+			return
+		}
+
+		rabbitMessage, err := getFirstMessageOnQueue(timeout, rabbitRoutingKey, rabbitCh)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		// Then
+		if rabbitMessage != expectedRabbitMessage {
+			t.Errorf("Rabbit messsage incorrect - \nexpected: %s \nactual: %s", expectedRabbitMessage, rabbitMessage)
+		}
+	}
+}
+
 func TestMessageQuarantiningBadJson(t *testing.T) {
 	testMessageQuarantining("bad_message", "Test bad non JSON message is quarantined", t)
 }
@@ -113,6 +150,7 @@ func testMessageQuarantining(messageToSend string, testDescription string, t *te
 		messageToSend,
 		cfg.EqReceiptTopic, cfg.EqReceiptProject))
 
+	// Allow a second for the processor to process the message
 	time.Sleep(1 * time.Second)
 
 	if len(requests) != 1 {
@@ -153,42 +191,6 @@ func assertEqual(expected interface{}, actual interface{}, feedback string, t *t
 	return true
 }
 
-func testMessageProcessing(messageToSend string, expectedRabbitMessage string, topic string, project string, rabbitRoutingKey string) func(t *testing.T) {
-	return func(t *testing.T) {
-		if _, err := StartProcessors(ctx, cfg, make(chan error)); err != nil {
-			t.Error(err)
-			return
-		}
-
-		rabbitConn, rabbitCh, err := connectToRabbitChannel()
-		defer rabbitCh.Close()
-		defer rabbitConn.Close()
-		if _, err := rabbitCh.QueuePurge(rabbitRoutingKey, false); err != nil {
-			t.Error(err)
-			return
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-
-		// When
-		if messageId, err := publishMessageToPubSub(ctx, messageToSend, topic, project); err != nil {
-			t.Errorf("PubSub publish fail, project: %s, topic: %s, id: %s, error: %s", project, topic, messageId, err)
-			return
-		}
-
-		rabbitMessage, err := getFirstMessageOnQueue(ctx, rabbitRoutingKey, rabbitCh)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		// Then
-		if rabbitMessage != expectedRabbitMessage {
-			t.Errorf("Rabbit messsage incorrect - \nexpected: %s \nactual: %s", expectedRabbitMessage, rabbitMessage)
-		}
-		cancel()
-	}
-}
 
 func testMessageProcessingQuarantine(messageToSend string, topic string, project string) func(t *testing.T) {
 	return func(t *testing.T) {
@@ -198,6 +200,7 @@ func testMessageProcessingQuarantine(messageToSend string, topic string, project
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 
 		// When
 		if messageId, err := publishMessageToPubSub(ctx, messageToSend, topic, project); err != nil {
@@ -205,7 +208,6 @@ func testMessageProcessingQuarantine(messageToSend string, topic string, project
 			return
 		}
 
-		cancel()
 	}
 }
 
@@ -222,6 +224,8 @@ func TestStartProcessors(t *testing.T) {
 }
 
 func TestRabbitReconnect(t *testing.T) {
+	timeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	// Start up the processors normally
 	processors, err := StartProcessors(ctx, cfg, make(chan error))
@@ -236,8 +240,14 @@ func TestRabbitReconnect(t *testing.T) {
 	// Pick one of the processors rabbit channels
 	var channel *amqp.Channel
 	for channel == nil {
-		if len(processor.RabbitChannels) > 0 {
-			channel = processor.RabbitChannels[0]
+		select {
+		case <-timeout.Done():
+			t.Error()
+			return
+		default:
+			if len(processor.RabbitChannels) > 0 {
+				channel = processor.RabbitChannels[0]
+			}
 		}
 	}
 	channelErrChan := make(chan *amqp.Error)
@@ -260,18 +270,17 @@ func TestRabbitReconnect(t *testing.T) {
 
 	// Wait for the unpublishable message to kill the channel with a timeout
 	select {
-	case <-time.After(3 * time.Second):
+	case <-timeout.Done():
 		t.Error("Timed out waiting for induced rabbit channel closure")
 	case <-channelErrChan:
 	}
 
 	// Try to successfully publish a message within the timeout
 	success := make(chan bool)
-	timeout := time.After(3 * time.Second)
 	go func() {
 		for {
 			select {
-			case <-timeout:
+			case <-timeout.Done():
 				// Kill this goroutine if the test times out
 				return
 			default:
@@ -290,7 +299,7 @@ func TestRabbitReconnect(t *testing.T) {
 	}()
 
 	select {
-	case <-timeout:
+	case <-timeout.Done():
 		t.Error("Failed to publish message with processors channel within the timeout")
 		return
 	case <-success:
