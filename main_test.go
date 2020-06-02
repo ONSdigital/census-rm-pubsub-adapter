@@ -191,7 +191,6 @@ func assertEqual(expected interface{}, actual interface{}, feedback string, t *t
 	return true
 }
 
-
 func testMessageProcessingQuarantine(messageToSend string, topic string, project string) func(t *testing.T) {
 	return func(t *testing.T) {
 		if _, err := StartProcessors(ctx, cfg, make(chan error)); err != nil {
