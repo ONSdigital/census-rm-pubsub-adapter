@@ -166,7 +166,6 @@ func (p *Processor) Publish(ctx context.Context, channel *amqp.Channel) {
 		select {
 		case outboundMessage := <-p.OutBoundMsgChan:
 
-			// Publish good messages
 			ctxLogger := p.Logger.With("transactionId", outboundMessage.EventMessage.Event.TransactionID)
 			if err := p.publishEventToRabbit(outboundMessage.EventMessage, p.RabbitRoutingKey, p.Config.EventsExchange, channel); err != nil {
 				ctxLogger.Errorw("Failed to publish message", "error", err)
@@ -174,12 +173,15 @@ func (p *Processor) Publish(ctx context.Context, channel *amqp.Channel) {
 				if err := channel.TxRollback(); err != nil {
 					ctxLogger.Errorw("Error rolling back rabbit transaction after failed message publish", "error", err)
 				}
-				return
+				continue
 			}
 			if err := channel.TxCommit(); err != nil {
 				ctxLogger.Errorw("Failed to commit transaction to publish message", "error", err)
-				p.OutBoundMsgChan <- outboundMessage
-				return
+				outboundMessage.SourceMessage.Nack()
+				if err := channel.TxRollback(); err != nil {
+					ctxLogger.Errorw("Error rolling back rabbit transaction", "error", err)
+				}
+				continue
 			}
 
 			outboundMessage.SourceMessage.Ack()
