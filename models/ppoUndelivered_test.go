@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -29,8 +30,11 @@ func testPpoUndeliveredValidate(msgJson string, valid bool) func(*testing.T) {
 			t.Error(err)
 			return
 		}
-		if err := ppoUndelivered.Validate(); !valid && err == nil || valid && err != nil {
-			t.Errorf("Got err: %s", err)
+		err := ppoUndelivered.Validate()
+		if valid {
+			assert.NoError(t, err, "Validation failed for valid message")
+		} else {
+			assert.Error(t, err, "Validate did not error for invalid message")
 		}
 	}
 }

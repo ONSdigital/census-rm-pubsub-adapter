@@ -2,6 +2,7 @@ package readiness
 
 import (
 	"context"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 	"time"
@@ -41,8 +42,7 @@ func testReadinessFiles(t *testing.T) {
 	// Then
 	// Check the readiness file is created
 	_, err = os.Stat(readinessFilePath)
-	if err != nil {
-		t.Error(err)
+	if !assert.NoError(t, err, "Readiness file was not present") {
 		return
 	}
 
@@ -55,9 +55,11 @@ func testReadinessFiles(t *testing.T) {
 	for {
 		// Check if readiness file has been removed
 		if _, err = os.Stat(readinessFilePath); err != nil {
+			// Succeed if the file does not now exist
 			if os.IsNotExist(err) {
 				return
 			}
+			// Error the test on any other error
 			t.Error(err)
 			return
 		}
@@ -65,7 +67,7 @@ func testReadinessFiles(t *testing.T) {
 		// Fail the test if it times out before the file is removed
 		select {
 		case <-timeoutCtx.Done():
-			t.Error("Test timed out waiting for file cleanup")
+			assert.Fail(t, "Test timed out waiting for file cleanup")
 			return
 		default:
 		}

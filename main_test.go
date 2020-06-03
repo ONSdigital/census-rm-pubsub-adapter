@@ -13,6 +13,7 @@ import (
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/processor"
 	"github.com/streadway/amqp"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -89,7 +90,9 @@ func TestMessageProcessing(t *testing.T) {
 
 func testMessageProcessing(messageToSend string, expectedRabbitMessage string, topic string, project string, rabbitRoutingKey string) func(t *testing.T) {
 	return func(t *testing.T) {
-		if _, err := StartProcessors(ctx, cfg, make(chan error)); err != nil {
+		timeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if _, err := StartProcessors(timeout, cfg, make(chan error)); err != nil {
 			t.Error(err)
 			return
 		}
@@ -102,9 +105,6 @@ func testMessageProcessing(messageToSend string, expectedRabbitMessage string, t
 			return
 		}
 
-		timeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
 		// When
 		if messageId, err := publishMessageToPubSub(timeout, messageToSend, topic, project); err != nil {
 			t.Errorf("PubSub publish fail, project: %s, topic: %s, id: %s, error: %s", project, topic, messageId, err)
@@ -112,15 +112,12 @@ func testMessageProcessing(messageToSend string, expectedRabbitMessage string, t
 		}
 
 		rabbitMessage, err := getFirstMessageOnQueue(timeout, rabbitRoutingKey, rabbitCh)
-		if err != nil {
-			t.Error(err)
+		if !assert.NoErrorf(t, err, "Did not find message on queue %s", rabbitRoutingKey) {
 			return
 		}
 
 		// Then
-		if rabbitMessage != expectedRabbitMessage {
-			t.Errorf("Rabbit messsage incorrect - \nexpected: %s \nactual: %s", expectedRabbitMessage, rabbitMessage)
-		}
+		assert.Equal(t, expectedRabbitMessage, rabbitMessage)
 	}
 }
 
@@ -136,6 +133,9 @@ func testMessageQuarantining(messageToSend string, testDescription string, t *te
 	var requests []*http.Request
 	var requestBody []byte
 
+	timeout, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
 	mockResult := "Success!"
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
@@ -147,15 +147,21 @@ func testMessageQuarantining(messageToSend string, testDescription string, t *te
 
 	cfg.QuarantineMessageUrl = srv.URL
 
-	t.Run(testDescription, testMessageProcessingQuarantine(
-		messageToSend,
-		cfg.EqReceiptTopic, cfg.EqReceiptProject))
+	if _, err := StartProcessors(timeout, cfg, make(chan error)); err != nil {
+		t.Error(err)
+		return
+	}
+
+	// When
+	if _, err := publishMessageToPubSub(timeout, messageToSend, cfg.EqReceiptTopic, cfg.EqReceiptProject); err != nil {
+		t.Errorf("Failed to publish message to PubSub, err: %s", err)
+		return
+	}
 
 	// Allow a second for the processor to process the message
 	time.Sleep(1 * time.Second)
 
-	if len(requests) != 1 {
-		t.Errorf("Unexpected number of calls to Exception Manager")
+	if !assert.Len(t, requests, 1, "Unexpected number of calls to Exception Manager") {
 		return
 	}
 
@@ -166,61 +172,28 @@ func testMessageQuarantining(messageToSend string, testDescription string, t *te
 		return
 	}
 
-	if !assertEqual("application/json", quarantineBody.ContentType, "Dodgy content type", t) ||
-		!assertEqual("Error unmarshalling message", quarantineBody.ExceptionClass, "Dodgy exception class", t) ||
-		!assertEqual(1, len(quarantineBody.Headers), "Dodgy headers", t) ||
-		!assertEqual(64, len(quarantineBody.MessageHash), "Dodgy message hash", t) ||
-		!assertEqual(messageToSend, string(quarantineBody.MessagePayload), "Dodgy message payload", t) ||
-		!assertEqual(cfg.EqReceiptSubscription, quarantineBody.Queue, "Dodgy quarantine queue", t) ||
-		!assertEqual("none", quarantineBody.RoutingKey, "Dodgy routing key", t) ||
-		!assertEqual("Pubsub Adapter", quarantineBody.Service, "Dodgy routing key", t) {
-		return
-	}
-
-	if len(quarantineBody.Headers["pubSubId"]) == 0 {
-		t.Errorf("Dodgy pubSubId header, expected non-zero length")
-		return
-	}
-}
-
-func assertEqual(expected interface{}, actual interface{}, feedback string, t *testing.T) bool {
-	if expected != actual {
-		t.Errorf("%v, expected %v, actual %v", feedback, expected, actual)
-		return false
-	}
-
-	return true
-}
-
-func testMessageProcessingQuarantine(messageToSend string, topic string, project string) func(t *testing.T) {
-	return func(t *testing.T) {
-		if _, err := StartProcessors(ctx, cfg, make(chan error)); err != nil {
-			t.Error(err)
-			return
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		// When
-		if messageId, err := publishMessageToPubSub(ctx, messageToSend, topic, project); err != nil {
-			t.Errorf("PubSub publish fail, project: %s, topic: %s, id: %s, error: %s", project, topic, messageId, err)
-			return
-		}
-
-	}
+	assert.Equal(t, "application/json", quarantineBody.ContentType, "Dodgy content type")
+	assert.Equal(t, "Error unmarshalling message", quarantineBody.ExceptionClass, "Dodgy exception class")
+	assert.Equal(t, messageToSend, string(quarantineBody.MessagePayload), "Dodgy message payload")
+	assert.Equal(t, cfg.EqReceiptSubscription, quarantineBody.Queue, "Dodgy quarantine queue")
+	assert.Equal(t, "none", quarantineBody.RoutingKey, "Dodgy routing key")
+	assert.Equal(t, "Pubsub Adapter", quarantineBody.Service, "Dodgy routing key")
+	assert.Len(t, quarantineBody.MessageHash, 64, "Dodgy message hash")
+	assert.Len(t, quarantineBody.Headers, 1, "Dodgy headers")
+	assert.Contains(t, quarantineBody.Headers, "pubSubId", "Dodgy headers, missing pubSubId")
+	assert.False(t, len(quarantineBody.Headers["pubSubId"]) == 0, "Dodgy pubSubId header, expected non-zero length")
 }
 
 func TestStartProcessors(t *testing.T) {
-	processors, err := StartProcessors(ctx, cfg, make(chan error))
+	timeout, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	processors, err := StartProcessors(timeout, cfg, make(chan error))
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	if len(processors) != 5 {
-		t.Errorf("StartProcessors should return 5 processors, actually returned %d", len(processors))
-	}
+	assert.Len(t, processors, 5, "StartProcessors should return 5 processors")
 }
 
 func TestRabbitReconnectOnChannelDeath(t *testing.T) {
