@@ -10,7 +10,8 @@ import (
 )
 
 func NewOfflineReceiptProcessor(ctx context.Context, appConfig *config.Configuration, errChan chan error) (*Processor, error) {
-	return NewProcessor(ctx, appConfig, appConfig.OfflineReceiptProject, appConfig.OfflineReceiptSubscription, appConfig.ReceiptRoutingKey, convertOfflineReceiptToRmMessage, unmarshalOfflineReceipt, errChan)
+	return NewProcessor(ctx, appConfig, appConfig.OfflineReceiptProject, appConfig.OfflineReceiptSubscription,
+		appConfig.ReceiptRoutingKey, convertOfflineReceiptToRmMessage, unmarshalOfflineReceipt, errChan)
 }
 
 func unmarshalOfflineReceipt(data []byte) (models.PubSubMessage, error) {

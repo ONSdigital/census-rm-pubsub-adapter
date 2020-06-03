@@ -10,7 +10,8 @@ import (
 )
 
 func NewPpoUndeliveredProcessor(ctx context.Context, appConfig *config.Configuration, errChan chan error) (*Processor, error) {
-	return NewProcessor(ctx, appConfig, appConfig.PpoUndeliveredProject, appConfig.PpoUndeliveredSubscription, appConfig.UndeliveredRoutingKey, convertPpoUndeliveredToRmMessage, unmarshalPpoUndelivered, errChan)
+	return NewProcessor(ctx, appConfig, appConfig.PpoUndeliveredProject, appConfig.PpoUndeliveredSubscription,
+		appConfig.UndeliveredRoutingKey, convertPpoUndeliveredToRmMessage, unmarshalPpoUndelivered, errChan)
 }
 
 func unmarshalPpoUndelivered(data []byte) (models.PubSubMessage, error) {

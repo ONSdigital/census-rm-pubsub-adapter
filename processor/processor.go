@@ -27,23 +27,29 @@ type Processor struct {
 	convertMessage     messageConverter
 	ErrChan            chan error
 	Logger             *zap.SugaredLogger
+	pubSubProject      string
+	pubSubSubscription string
+	Errored            bool
 }
 
-func NewProcessor(ctx context.Context,
-	appConfig *config.Configuration,
-	pubSubProject string,
-	pubSubSubscription string,
-	routingKey string,
-	messageConverter messageConverter,
-	messageUnmarshaller messageUnmarshaller, errChan chan error) (*Processor, error) {
-	var err error
+func NewProcessor(ctx context.Context, appConfig *config.Configuration, pubSubProject string, pubSubSubscription string,
+	routingKey string, messageConverter messageConverter, messageUnmarshaller messageUnmarshaller, errChan chan error) (*Processor, error) {
+
 	p := &Processor{}
 	p.Config = appConfig
 	p.RabbitRoutingKey = routingKey
 	p.convertMessage = messageConverter
 	p.unmarshallMessage = messageUnmarshaller
 	p.ErrChan = errChan
+	p.pubSubProject = pubSubProject
+	p.pubSubSubscription = pubSubSubscription
 	p.Logger = logger.Logger.With("subscription", pubSubSubscription)
+
+	return p.StartProcessor(ctx,appConfig)
+}
+
+func (p *Processor)StartProcessor(ctx context.Context, appConfig *config.Configuration) (*Processor, error) {
+	var err error
 
 	// Set up rabbit connection
 	p.RabbitConn, err = amqp.Dial(appConfig.RabbitConnectionString)
@@ -57,13 +63,13 @@ func NewProcessor(ctx context.Context,
 	}
 
 	// Setup PubSub connection
-	p.PubSubClient, err = pubsub.NewClient(ctx, pubSubProject)
+	p.PubSubClient, err = pubsub.NewClient(ctx, p.pubSubProject)
 	if err != nil {
 		return nil, errors.Wrap(err, "error settings up PubSub client")
 	}
 
 	// Setup subscription
-	p.PubSubSubscription = p.PubSubClient.Subscription(pubSubSubscription)
+	p.PubSubSubscription = p.PubSubClient.Subscription(p.pubSubSubscription)
 
 	// Start consuming from PubSub
 	p.Logger.Infow("Launching PubSub message receiver")
@@ -77,6 +83,7 @@ func (p *Processor) Consume(ctx context.Context) {
 	if err != nil {
 		p.Logger.Errorw("Error in consumer", "error", err)
 		p.ErrChan <- err
+		p.Errored = true
 	}
 }
 
@@ -104,7 +111,11 @@ func (p *Processor) Process(_ context.Context, msg *pubsub.Message) {
 	err = p.publishEventToRabbit(rmMessageToSend, p.RabbitRoutingKey, p.Config.EventsExchange)
 	if err != nil {
 		ctxLogger.Errorw("Failed to publish message", "error", err)
+
 		msg.Nack()
+		//We do want to Nack, but
+		p.Errored = true
+		p.ErrChan <- err
 	} else {
 		ctxLogger.Debugw("Acking message", "msgData", string(msg.Data))
 		msg.Ack()
@@ -162,11 +173,22 @@ func (p *Processor) quarantineMessageInRabbit(message *pubsub.Message) error {
 	return nil
 }
 
+func (p *Processor) ShutdownProcessor(ctx context.Context) {
+	p.CloseRabbit()
+	p.ClosePubSub(ctx)
+}
+
 func (p *Processor) CloseRabbit() {
 	if err := p.RabbitChannel.Close(); err != nil {
 		p.Logger.Errorw("Error closing rabbit channel during shutdown of processor", "error", err)
 	}
 	if err := p.RabbitConn.Close(); err != nil {
 		p.Logger.Errorw("Error closing rabbit connection during shutdown of processor", "error", err)
+	}
+}
+
+func (p *Processor) ClosePubSub(ctx context.Context) {
+	if err := p.PubSubClient.Close(); err != nil {
+		p.Logger.Errorw("Error closing pubsub client", "error", err)
 	}
 }

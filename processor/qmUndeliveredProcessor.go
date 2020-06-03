@@ -10,7 +10,8 @@ import (
 )
 
 func NewQmUndeliveredProcessor(ctx context.Context, appConfig *config.Configuration, errChan chan error) (*Processor, error) {
-	return NewProcessor(ctx, appConfig, appConfig.QmUndeliveredProject, appConfig.QmUndeliveredSubscription, appConfig.UndeliveredRoutingKey, convertQmUndeliveredToRmMessage, unmarshalQmUndelivered, errChan)
+	return NewProcessor(ctx, appConfig, appConfig.QmUndeliveredProject, appConfig.QmUndeliveredSubscription,
+		appConfig.UndeliveredRoutingKey, convertQmUndeliveredToRmMessage, unmarshalQmUndelivered, errChan)
 }
 
 func unmarshalQmUndelivered(data []byte) (models.PubSubMessage, error) {

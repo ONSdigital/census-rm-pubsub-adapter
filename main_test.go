@@ -9,8 +9,10 @@ import (
 	"context"
 	"errors"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
+	"github.com/ONSdigital/census-rm-pubsub-adapter/logger"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/processor"
 	"github.com/streadway/amqp"
+	"math/rand"
 	"os"
 	"runtime"
 	"testing"
@@ -130,7 +132,7 @@ func TestStartProcessors(t *testing.T) {
 }
 
 func testMessageProcessingWithProcessorsAlreadyStarted(messageToSend string, expectedRabbitMessage string, topic string,
-				project string, rabbitRoutingKey string) func(t *testing.T) {
+	project string, rabbitRoutingKey string) func(t *testing.T) {
 	return func(t *testing.T) {
 
 		rabbitConn, rabbitCh, err := connectToRabbitChannel()
@@ -141,7 +143,7 @@ func testMessageProcessingWithProcessorsAlreadyStarted(messageToSend string, exp
 			return
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 
 		// When
 		if messageId, err := publishMessageToPubSub(ctx, messageToSend, topic, project); err != nil {
@@ -165,16 +167,27 @@ func testMessageProcessingWithProcessorsAlreadyStarted(messageToSend string, exp
 
 func TestSingleProcessorFailingOnceRestarts(t *testing.T) {
 	errChan := make(chan error)
+	ctx, cancel := context.WithCancel(ctx)
+	processors := make([]*processor.Processor, 0)
 
-	//// Start all of the processors
 	processors, err := StartProcessors(ctx, cfg, errChan)
 	if err != nil {
-		t.Error(err)
-		return
+		logger.Logger.Errorw("Error starting processors", "error", err)
+		shutdown(ctx, cancel, processors)
 	}
 
 	if len(processors) != 4 {
 		t.Errorf("StartProcessors should return 4 processors, actually returned %d", len(processors))
+	}
+
+	go RunUntilUnrecoverableErrorOrShutdownSignal(ctx, cfg, cancel, errChan, processors)
+
+	// For the tests we'll stop a Processor at random
+	stopProcessorIndex := rand.Intn(len(processors) - 1)
+	for i, p := range processors {
+		if i == stopProcessorIndex {
+			p.ClosePubSub(ctx)
+		}
 	}
 
 	//Test a good msg that should pass through
@@ -183,36 +196,22 @@ func TestSingleProcessorFailingOnceRestarts(t *testing.T) {
 		`{"event":{"type":"RESPONSE_RECEIVED","source":"RECEIPT_SERVICE","channel":"EQ","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"response":{"questionnaireId":"01213213213","unreceipt":false}}}`,
 		cfg.EqReceiptTopic, cfg.EqReceiptProject, cfg.ReceiptRoutingKey))
 
-	//Now kill the EqReceipting one
+	t.Run("Test Offline receipting", testMessageProcessingWithProcessorsAlreadyStarted(
+		`{"dateTime": "2008-08-24T00:00:00", "unreceipt" : false, "channel" : "INTEGRATION_TEST", "transactionId": "abc123xxx", "questionnaireId": "01213213213"}`,
+		`{"event":{"type":"RESPONSE_RECEIVED","source":"RECEIPT_SERVICE","channel":"INTEGRATION_TEST","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"response":{"questionnaireId":"01213213213","unreceipt":false}}}`,
+		cfg.OfflineReceiptTopic, cfg.OfflineReceiptProject, cfg.ReceiptRoutingKey))
 
-	//for _, processor := range processors {
-	//
-	//	if processor.RabbitRoutingKey == "goTestReceiptQueue" {
-	//		processor.PubSubSubscription.Delete(ctx)
-	//	}
-	//}
-	//
-	//processors, err = StartProcessors(ctx, cfg, errChan)
-	//if err != nil {
-	//	t.Error(err)
-	//	return
-	//}
+	t.Run("Test PPO undelivered mail", testMessageProcessingWithProcessorsAlreadyStarted(
+		`{"dateTime": "2008-08-24T00:00:00", "transactionId": "abc123xxx", "caseRef": "0123456789", "productCode": "P_TEST_1"}`,
+		`{"event":{"type":"UNDELIVERED_MAIL_REPORTED","source":"RECEIPT_SERVICE","channel":"PPO","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"fulfilmentInformation":{"caseRef":"0123456789","fulfilmentCode":"P_TEST_1"}}}`,
+		cfg.PpoUndeliveredTopic, cfg.PpoUndeliveredProject, cfg.UndeliveredRoutingKey))
 
-	t.Run("Test EQ receipting With Processor Killed", testMessageProcessingWithProcessorsAlreadyStarted(
-		`{"timeCreated": "2008-08-24T00:00:00Z", "metadata": {"tx_id": "abc123xxx", "questionnaire_id": "01213213213"}}`,
-		`{"event":{"type":"RESPONSE_RECEIVED","source":"RECEIPT_SERVICE","channel":"EQ","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"response":{"questionnaireId":"01213213213","unreceipt":false}}}`,
-		cfg.EqReceiptTopic, cfg.EqReceiptProject, cfg.ReceiptRoutingKey))
-
-
-	// We want to restart the processor, or maybe just recreate it and delete the old one?
-	eqReceiptProcessor, err := processor.NewEqReceiptProcessor(ctx, cfg, errChan)
-	processors = append(processors, eqReceiptProcessor)
-
-	t.Run("Test EQ receipting With Processor Restarted", testMessageProcessingWithProcessorsAlreadyStarted(
-		`{"timeCreated": "2008-08-24T00:00:00Z", "metadata": {"tx_id": "abc123xxx", "questionnaire_id": "01213213213"}}`,
-		`{"event":{"type":"RESPONSE_RECEIVED","source":"RECEIPT_SERVICE","channel":"EQ","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"response":{"questionnaireId":"01213213213","unreceipt":false}}}`,
-		cfg.EqReceiptTopic, cfg.EqReceiptProject, cfg.ReceiptRoutingKey))
+	t.Run("Test QM undelivered mail", testMessageProcessingWithProcessorsAlreadyStarted(
+		`{"dateTime": "2008-08-24T00:00:00", "transactionId": "abc123xxx", "questionnaireId": "01213213213"}`,
+		`{"event":{"type":"UNDELIVERED_MAIL_REPORTED","source":"RECEIPT_SERVICE","channel":"QM","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"fulfilmentInformation":{"questionnaireId":"01213213213"}}}`,
+		cfg.QmUndeliveredTopic, cfg.QmUndeliveredProject, cfg.UndeliveredRoutingKey))
 }
+
 
 func publishMessageToPubSub(ctx context.Context, msg string, topic string, project string) (id string, err error) {
 	pubSubClient, err := pubsub.NewClient(ctx, project)
