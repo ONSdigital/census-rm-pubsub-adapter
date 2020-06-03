@@ -1,23 +1,16 @@
 package config
 
 import (
-	"reflect"
-	"strings"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestGetErrorsWithoutValues(t *testing.T) {
 	cfg = nil
 	_, err := GetConfig()
-	if err == nil {
-		t.Log("Config get did not return an error in prod mode when not provided any values")
-		t.Fail()
-		return
-	}
-	if !strings.Contains(err.Error(), "required key") || !strings.Contains(err.Error(), "missing value") {
-		t.Log(err)
-		t.Fail()
-	}
+	assert.Error(t, err, "Config get did not return an error in prod mode when not provided any values")
+	assert.Contains(t, err.Error(), "required key")
+	assert.Contains(t, err.Error(), "missing value")
 }
 
 func TestBuildRabbitConfigurationString(t *testing.T) {
@@ -31,9 +24,5 @@ func TestBuildRabbitConfigurationString(t *testing.T) {
 	}
 
 	buildRabbitConnectionString(cfg)
-
-	if !reflect.DeepEqual(cfg.RabbitConnectionString, "amqp://testUser:testPass@testHost:123/testVhost") {
-		t.Logf("Built rabbit connection string did not match expected, found: %q", cfg.RabbitConnectionString)
-		t.Fail()
-	}
+	assert.Equal(t, "amqp://testUser:testPass@testHost:123/testVhost", cfg.RabbitConnectionString)
 }
