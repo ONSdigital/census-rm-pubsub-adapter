@@ -20,16 +20,11 @@ type messageUnmarshaller func([]byte) (models.PubSubMessage, error)
 
 type messageConverter func(message models.PubSubMessage) (*models.RmMessage, error)
 
-type OutboundMessage struct {
-	EventMessage  *models.RmMessage
-	SourceMessage *pubsub.Message
-}
-
 type Processor struct {
 	RabbitConn         *amqp.Connection
 	RabbitRoutingKey   string
 	RabbitChannels     []*amqp.Channel
-	OutBoundMsgChan    chan *OutboundMessage
+	OutboundMsgChan    chan *models.OutboundMessage
 	Config             *config.Configuration
 	PubSubClient       *pubsub.Client
 	PubSubSubscription *pubsub.Subscription
@@ -53,7 +48,7 @@ func NewProcessor(ctx context.Context,
 	p.convertMessage = messageConverter
 	p.unmarshallMessage = messageUnmarshaller
 	p.ErrChan = errChan
-	p.OutBoundMsgChan = make(chan *OutboundMessage)
+	p.OutboundMsgChan = make(chan *models.OutboundMessage)
 	p.RabbitChannels = make([]*amqp.Channel, 0)
 	p.Logger = logger.Logger.With("subscription", pubSubSubscription)
 
@@ -164,7 +159,7 @@ func (p *Processor) ManagePublishers(ctx context.Context) {
 func (p *Processor) Publish(ctx context.Context, channel *amqp.Channel) {
 	for {
 		select {
-		case outboundMessage := <-p.OutBoundMsgChan:
+		case outboundMessage := <-p.OutboundMsgChan:
 
 			ctxLogger := p.Logger.With("transactionId", outboundMessage.EventMessage.Event.TransactionID)
 			if err := p.publishEventToRabbit(outboundMessage.EventMessage, p.RabbitRoutingKey, p.Config.EventsExchange, channel); err != nil {
@@ -222,7 +217,7 @@ func (p *Processor) Process(_ context.Context, msg *pubsub.Message) {
 		return
 	}
 	ctxLogger.Debugw("Sending outbound message to publish", "msgData", string(msg.Data))
-	p.OutBoundMsgChan <- &OutboundMessage{SourceMessage: msg, EventMessage: rmMessageToSend}
+	p.OutboundMsgChan <- &models.OutboundMessage{SourceMessage: msg, EventMessage: rmMessageToSend}
 }
 
 func (p *Processor) publishEventToRabbit(message *models.RmMessage, routingKey string, exchange string, channel *amqp.Channel) error {
