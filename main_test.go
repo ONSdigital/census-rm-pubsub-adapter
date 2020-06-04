@@ -12,7 +12,6 @@ import (
 	"github.com/ONSdigital/census-rm-pubsub-adapter/logger"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/processor"
 	"github.com/streadway/amqp"
-	"math/rand"
 	"os"
 	"runtime"
 	"testing"
@@ -182,12 +181,32 @@ func TestSingleProcessorFailingOnceRestarts(t *testing.T) {
 
 	go RunUntilUnrecoverableErrorOrShutdownSignal(ctx, cfg, cancel, errChan, processors)
 
+	// This works for all of them
 	// For the tests we'll stop a Processor at random
-	stopProcessorIndex := rand.Intn(len(processors) - 1)
-	for i, p := range processors {
-		if i == stopProcessorIndex {
+	//stopProcessorIndex := rand.Intn(len(processors) - 1)
+	//for i, p := range processors {
+	//	if i == stopProcessorIndex {
+	//
+	//		// Due to weird test name issues have tested both stopping Pubsub and shutting a rabbit con here
+	//		//
+	//		//p.ClosePubSub(ctx)
+	//		//if err := p.RabbitConn.Close(); err != nil {
+	//		//	p.Logger.Errorw("Error closing rabbit connection during shutdown of processor", "error", err)
+	//		//}
+	//
+	//		if err := p.RabbitChannel.Close(); err != nil {
+	//			p.Logger.Errorw("Error closing rabbit channel during shutdown of processor", "error", err)
+	//		}
+	//	}
+	//}
+
+	for _, p := range processors {
+			// Due to weird test name issues have tested both stopping Pubsub and shutting a rabbit con here
+			//
 			p.ClosePubSub(ctx)
-		}
+			//if err := p.RabbitConn.Close(); err != nil {
+			//	p.Logger.Errorw("Error closing rabbit connection during shutdown of processor", "error", err)
+			//}
 	}
 
 	//Test a good msg that should pass through
@@ -211,7 +230,6 @@ func TestSingleProcessorFailingOnceRestarts(t *testing.T) {
 		`{"event":{"type":"UNDELIVERED_MAIL_REPORTED","source":"RECEIPT_SERVICE","channel":"QM","dateTime":"2008-08-24T00:00:00Z","transactionId":"abc123xxx"},"payload":{"fulfilmentInformation":{"questionnaireId":"01213213213"}}}`,
 		cfg.QmUndeliveredTopic, cfg.QmUndeliveredProject, cfg.UndeliveredRoutingKey))
 }
-
 
 func publishMessageToPubSub(ctx context.Context, msg string, topic string, project string) (id string, err error) {
 	pubSubClient, err := pubsub.NewClient(ctx, project)

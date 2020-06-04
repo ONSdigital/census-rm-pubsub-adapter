@@ -29,7 +29,15 @@ type Processor struct {
 	Logger             *zap.SugaredLogger
 	pubSubProject      string
 	pubSubSubscription string
-	Errored            bool
+}
+
+type Error struct {
+	Processor *Processor
+	err error
+}
+
+func (p Error) Error() string {
+	return p.err.Error()
 }
 
 func NewProcessor(ctx context.Context, appConfig *config.Configuration, pubSubProject string, pubSubSubscription string,
@@ -81,9 +89,13 @@ func (p *Processor)StartProcessor(ctx context.Context, appConfig *config.Configu
 func (p *Processor) Consume(ctx context.Context) {
 	err := p.PubSubSubscription.Receive(ctx, p.Process)
 	if err != nil {
+
+		errStruct := &Error{}
+		errStruct.Processor = p
+		errStruct.err = err
+
 		p.Logger.Errorw("Error in consumer", "error", err)
-		p.ErrChan <- err
-		p.Errored = true
+		p.ErrChan <- errStruct
 	}
 }
 
@@ -113,9 +125,12 @@ func (p *Processor) Process(_ context.Context, msg *pubsub.Message) {
 		ctxLogger.Errorw("Failed to publish message", "error", err)
 
 		msg.Nack()
-		//We do want to Nack, but
-		p.Errored = true
-		p.ErrChan <- err
+
+		errStruct := &Error{}
+		errStruct.Processor = p
+		errStruct.err = err
+
+		p.ErrChan <- errStruct
 	} else {
 		ctxLogger.Debugw("Acking message", "msgData", string(msg.Data))
 		msg.Ack()
@@ -182,6 +197,7 @@ func (p *Processor) CloseRabbit() {
 	if err := p.RabbitChannel.Close(); err != nil {
 		p.Logger.Errorw("Error closing rabbit channel during shutdown of processor", "error", err)
 	}
+
 	if err := p.RabbitConn.Close(); err != nil {
 		p.Logger.Errorw("Error closing rabbit connection during shutdown of processor", "error", err)
 	}
