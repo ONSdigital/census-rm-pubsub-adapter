@@ -116,7 +116,7 @@ func shutdown(ctx context.Context, cancel context.CancelFunc, processors []*proc
 
 		logger.Logger.Info("Starting rabbit cleanup")
 		for _, p := range processors {
-			p.CloseRabbit()
+			p.CloseRabbit(false)
 		}
 
 	}()
