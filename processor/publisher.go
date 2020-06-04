@@ -8,6 +8,20 @@ import (
 	"github.com/streadway/amqp"
 )
 
+type RabbitConnection interface {
+	Close() error
+	Channel() (*amqp.Channel, error)
+}
+
+type RabbitChannel interface {
+	Close() error
+	Tx() error
+	TxCommit() error
+	TxRollback() error
+	NotifyClose(chan *amqp.Error) chan *amqp.Error
+	Publish(exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error
+}
+
 func (p *Processor) initRabbitConnection() error {
 	p.Logger.Debug("Initialising rabbit connection")
 	var err error
@@ -20,7 +34,7 @@ func (p *Processor) initRabbitConnection() error {
 	return nil
 }
 
-func (p *Processor) initRabbitChannel(cancelFunc context.CancelFunc) (*amqp.Channel, error) {
+func (p *Processor) initRabbitChannel(cancelFunc context.CancelFunc) (RabbitChannel, error) {
 	var err error
 	var channel *amqp.Channel
 
@@ -59,7 +73,7 @@ func (p *Processor) startPublishers(ctx context.Context, publisherCancel context
 		return
 	}
 
-	p.RabbitChannels = make([]*amqp.Channel, 0)
+	p.RabbitChannels = make([]RabbitChannel, 0)
 
 	for i := 0; i < p.Config.PublishersPerProcessor; i++ {
 
@@ -96,7 +110,7 @@ func (p *Processor) ManagePublishers(ctx context.Context) {
 	}
 }
 
-func (p *Processor) Publish(ctx context.Context, channel *amqp.Channel) {
+func (p *Processor) Publish(ctx context.Context, channel RabbitChannel) {
 	for {
 		select {
 		case outboundMessage := <-p.OutboundMsgChan:
@@ -127,7 +141,7 @@ func (p *Processor) Publish(ctx context.Context, channel *amqp.Channel) {
 	}
 }
 
-func (p *Processor) publishEventToRabbit(message *models.RmMessage, routingKey string, exchange string, channel *amqp.Channel) error {
+func (p *Processor) publishEventToRabbit(message *models.RmMessage, routingKey string, exchange string, channel RabbitChannel) error {
 
 	byteMessage, err := json.Marshal(message)
 	if err != nil {
@@ -137,7 +151,7 @@ func (p *Processor) publishEventToRabbit(message *models.RmMessage, routingKey s
 	if err := channel.Publish(
 		exchange,
 		routingKey, // routing key (the queue)
-		false,      // mandatory
+		true,       // mandatory
 		false,      // immediate
 		amqp.Publishing{
 			ContentType:  "application/json",
@@ -152,15 +166,9 @@ func (p *Processor) publishEventToRabbit(message *models.RmMessage, routingKey s
 }
 
 func (p *Processor) CloseRabbit(errOk bool) {
-	for _, channel := range p.RabbitChannels {
-		if err := channel.Close(); err != nil && !errOk {
-			p.Logger.Errorw("Error closing rabbit channel", "error", err)
-		}
-	}
-
 	if p.RabbitConn != nil {
 		if err := p.RabbitConn.Close(); err != nil && !errOk {
-			p.Logger.Errorw("Error closing rabbit connection ", "error", err)
+			p.Logger.Errorw("Error closing rabbit connection", "error", err)
 		}
 	}
 }

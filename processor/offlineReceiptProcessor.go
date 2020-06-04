@@ -13,7 +13,7 @@ func NewOfflineReceiptProcessor(ctx context.Context, appConfig *config.Configura
 	return NewProcessor(ctx, appConfig, appConfig.OfflineReceiptProject, appConfig.OfflineReceiptSubscription, appConfig.ReceiptRoutingKey, convertOfflineReceiptToRmMessage, unmarshalOfflineReceipt, errChan)
 }
 
-func unmarshalOfflineReceipt(data []byte) (models.PubSubMessage, error) {
+func unmarshalOfflineReceipt(data []byte) (models.InboundMessage, error) {
 	var offlineReceipt models.OfflineReceipt
 	if err := json.Unmarshal(data, &offlineReceipt); err != nil {
 		return nil, err
@@ -24,7 +24,7 @@ func unmarshalOfflineReceipt(data []byte) (models.PubSubMessage, error) {
 	return offlineReceipt, nil
 }
 
-func convertOfflineReceiptToRmMessage(receipt models.PubSubMessage) (*models.RmMessage, error) {
+func convertOfflineReceiptToRmMessage(receipt models.InboundMessage) (*models.RmMessage, error) {
 	offlineReceipt, ok := receipt.(models.OfflineReceipt)
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("Wrong message model given to convertEqReceiptToRmMessage: %T, only accepts EqReceipt, tx_id: %q", receipt, receipt.GetTransactionId()))

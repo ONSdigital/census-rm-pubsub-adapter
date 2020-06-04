@@ -43,6 +43,28 @@ type Configuration struct {
 }
 
 var cfg *Configuration
+var TestConfig = &Configuration{
+	PublishersPerProcessor:          1,
+	RabbitConnectionString:          "amqp://guest:guest@localhost:7672/",
+	ReceiptRoutingKey:               "goTestReceiptQueue",
+	UndeliveredRoutingKey:           "goTestUndeliveredQueue",
+	FulfilmentRoutingKey:            "goTestFulfilmentConfirmedQueue",
+	EqReceiptProject:                "project",
+	EqReceiptSubscription:           "rm-receipt-subscription",
+	EqReceiptTopic:                  "eq-submission-topic",
+	OfflineReceiptProject:           "offline-project",
+	OfflineReceiptSubscription:      "rm-offline-receipt-subscription",
+	OfflineReceiptTopic:             "offline-receipt-topic",
+	PpoUndeliveredProject:           "ppo-undelivered-project",
+	PpoUndeliveredTopic:             "ppo-undelivered-mail-topic",
+	PpoUndeliveredSubscription:      "rm-ppo-undelivered-subscription",
+	QmUndeliveredProject:            "qm-undelivered-project",
+	QmUndeliveredTopic:              "qm-undelivered-mail-topic",
+	QmUndeliveredSubscription:       "rm-qm-undelivered-subscription",
+	FulfilmentConfirmedProject:      "fulfilment-confirmed-project",
+	FulfilmentConfirmedSubscription: "fulfilment-subscription",
+	FulfilmentConfirmedTopic:        "fulfilment-topic",
+}
 
 func GetConfig() (*Configuration, error) {
 	if cfg != nil {

@@ -13,7 +13,7 @@ func NewFulfilmentConfirmedProcessor(ctx context.Context, appConfig *config.Conf
 	return NewProcessor(ctx, appConfig, appConfig.FulfilmentConfirmedProject, appConfig.FulfilmentConfirmedSubscription, appConfig.FulfilmentRoutingKey, convertFulfilmentConfirmedToRmMessage, unmarshalFulfilmentConfirmed, errChan)
 }
 
-func unmarshalFulfilmentConfirmed(data []byte) (models.PubSubMessage, error) {
+func unmarshalFulfilmentConfirmed(data []byte) (models.InboundMessage, error) {
 	var fulfilmentConfirmed models.FulfilmentConfirmed
 	if err := json.Unmarshal(data, &fulfilmentConfirmed); err != nil {
 		return nil, err
@@ -24,7 +24,7 @@ func unmarshalFulfilmentConfirmed(data []byte) (models.PubSubMessage, error) {
 	return fulfilmentConfirmed, nil
 }
 
-func convertFulfilmentConfirmedToRmMessage(confirmation models.PubSubMessage) (*models.RmMessage, error) {
+func convertFulfilmentConfirmedToRmMessage(confirmation models.InboundMessage) (*models.RmMessage, error) {
 	fulfilmentConfirmed, ok := confirmation.(models.FulfilmentConfirmed)
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("Wrong message model given to convertFulfilmentConfirmedToRmMessage: %T, only accepts FulfilmentConfirmed, tx_id: %q", confirmation, confirmation.GetTransactionId()))

@@ -13,7 +13,7 @@ func NewQmUndeliveredProcessor(ctx context.Context, appConfig *config.Configurat
 	return NewProcessor(ctx, appConfig, appConfig.QmUndeliveredProject, appConfig.QmUndeliveredSubscription, appConfig.UndeliveredRoutingKey, convertQmUndeliveredToRmMessage, unmarshalQmUndelivered, errChan)
 }
 
-func unmarshalQmUndelivered(data []byte) (models.PubSubMessage, error) {
+func unmarshalQmUndelivered(data []byte) (models.InboundMessage, error) {
 	var qmUndelivered models.QmUndelivered
 	if err := json.Unmarshal(data, &qmUndelivered); err != nil {
 		return nil, err
@@ -24,7 +24,7 @@ func unmarshalQmUndelivered(data []byte) (models.PubSubMessage, error) {
 	return qmUndelivered, nil
 }
 
-func convertQmUndeliveredToRmMessage(message models.PubSubMessage) (*models.RmMessage, error) {
+func convertQmUndeliveredToRmMessage(message models.InboundMessage) (*models.RmMessage, error) {
 	qmUndelivered, ok := message.(models.QmUndelivered)
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("Wrong message model given to convertQmUndeliveredToRmMessage: %T, only accepts qmUndelivered, tx_id: %q", message, message.GetTransactionId()))

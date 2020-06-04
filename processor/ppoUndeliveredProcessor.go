@@ -13,7 +13,7 @@ func NewPpoUndeliveredProcessor(ctx context.Context, appConfig *config.Configura
 	return NewProcessor(ctx, appConfig, appConfig.PpoUndeliveredProject, appConfig.PpoUndeliveredSubscription, appConfig.UndeliveredRoutingKey, convertPpoUndeliveredToRmMessage, unmarshalPpoUndelivered, errChan)
 }
 
-func unmarshalPpoUndelivered(data []byte) (models.PubSubMessage, error) {
+func unmarshalPpoUndelivered(data []byte) (models.InboundMessage, error) {
 	var ppoUndelivered models.PpoUndelivered
 	if err := json.Unmarshal(data, &ppoUndelivered); err != nil {
 		return nil, err
@@ -24,7 +24,7 @@ func unmarshalPpoUndelivered(data []byte) (models.PubSubMessage, error) {
 	return ppoUndelivered, nil
 }
 
-func convertPpoUndeliveredToRmMessage(message models.PubSubMessage) (*models.RmMessage, error) {
+func convertPpoUndeliveredToRmMessage(message models.InboundMessage) (*models.RmMessage, error) {
 	ppoUndelivered, ok := message.(models.PpoUndelivered)
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("Wrong message model given to convertPpoUndeliveredToRmMessage: %T, only accepts ppoUndelivered, tx_id: %q", message, message.GetTransactionId()))

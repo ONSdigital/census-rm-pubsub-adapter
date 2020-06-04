@@ -11,19 +11,18 @@ import (
 	"github.com/ONSdigital/census-rm-pubsub-adapter/logger"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 	"github.com/pkg/errors"
-	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 	"net/http"
 )
 
-type messageUnmarshaller func([]byte) (models.PubSubMessage, error)
+type messageUnmarshaller func([]byte) (models.InboundMessage, error)
 
-type messageConverter func(message models.PubSubMessage) (*models.RmMessage, error)
+type messageConverter func(message models.InboundMessage) (*models.RmMessage, error)
 
 type Processor struct {
-	RabbitConn         *amqp.Connection
+	RabbitConn         RabbitConnection
 	RabbitRoutingKey   string
-	RabbitChannels     []*amqp.Channel
+	RabbitChannels     []RabbitChannel
 	OutboundMsgChan    chan *models.OutboundMessage
 	Config             *config.Configuration
 	PubSubClient       *pubsub.Client
@@ -49,7 +48,7 @@ func NewProcessor(ctx context.Context,
 	p.unmarshallMessage = messageUnmarshaller
 	p.ErrChan = errChan
 	p.OutboundMsgChan = make(chan *models.OutboundMessage)
-	p.RabbitChannels = make([]*amqp.Channel, 0)
+	p.RabbitChannels = make([]RabbitChannel, 0)
 	p.Logger = logger.Logger.With("subscription", pubSubSubscription)
 
 	// Setup PubSub connection
