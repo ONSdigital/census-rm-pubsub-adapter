@@ -14,6 +14,7 @@ import (
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 	"net/http"
+	"time"
 )
 
 type messageUnmarshaller func([]byte) (models.PubSubMessage, error)
@@ -116,6 +117,8 @@ func (p *Processor) initRabbitChannel(cancelFunc context.CancelFunc) (*amqp.Chan
 func (p *Processor) startPublishers(ctx context.Context, publisherCancel context.CancelFunc) {
 	// Setup one rabbit connection
 	if err := p.initRabbitConnection(); err != nil {
+		p.Logger.Errorw("Error initialising rabbit connection", "error", err)
+		publisherCancel()
 		return
 	}
 
@@ -150,6 +153,9 @@ func (p *Processor) ManagePublishers(ctx context.Context) {
 
 			// Restart publishers
 			p.startPublishers(ctx, publisherCancel)
+
+			// Sleep for a second here so it doesn't bombard rabbit with reconnection attempts at a ridiculous rate
+			time.Sleep(1*time.Second)
 		case <-ctx.Done():
 			return
 		}
@@ -285,8 +291,9 @@ func (p *Processor) CloseRabbit(errOk bool) {
 		}
 	}
 
-	if err := p.RabbitConn.Close(); err != nil && !errOk {
-		p.Logger.Errorw("Error closing rabbit connection ", "error", err)
+	if p.RabbitConn != nil {
+		if err := p.RabbitConn.Close(); err != nil && !errOk {
+			p.Logger.Errorw("Error closing rabbit connection ", "error", err)
+		}
 	}
-
 }
