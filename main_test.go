@@ -11,6 +11,7 @@ import (
 	"errors"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
+	"github.com/ONSdigital/census-rm-pubsub-adapter/processor"
 	"github.com/streadway/amqp"
 	"io/ioutil"
 	"net/http"
@@ -233,8 +234,8 @@ func TestRabbitReconnectOnChannelDeath(t *testing.T) {
 		return
 	}
 
-	// Take the first processor
-	processor := processors[0]
+	// Take the first testProcessor
+	testProcessor := processors[0]
 
 	// Pick one of the processors rabbit channels
 	var channel *amqp.Channel
@@ -244,8 +245,8 @@ func TestRabbitReconnectOnChannelDeath(t *testing.T) {
 			t.Error()
 			return
 		default:
-			if len(processor.RabbitChannels) > 0 {
-				channel = processor.RabbitChannels[0]
+			if len(testProcessor.RabbitChannels) > 0 {
+				channel = testProcessor.RabbitChannels[0]
 			}
 		}
 	}
@@ -276,26 +277,7 @@ func TestRabbitReconnectOnChannelDeath(t *testing.T) {
 
 	// Try to successfully publish a message within the timeout
 	success := make(chan bool)
-	go func() {
-		for {
-			select {
-			case <-timeout.Done():
-				// Kill this goroutine if the test times out
-				return
-			default:
-				// Repeatedly try to publish a message using the processors channel
-				if len(processor.RabbitChannels) == 0 {
-					continue
-				}
-				channel := processor.RabbitChannels[0]
-				if err := publishToRabbit(channel, cfg.EventsExchange, cfg.ReceiptRoutingKey, `{"test":"message should publish after"}`); err == nil {
-					// We have successfully published a message with the processors re-opened rabbit channel
-					success <- true
-					return
-				}
-			}
-		}
-	}()
+	go attemptPublishOnProcessorsChannel(timeout, testProcessor, success)
 
 	select {
 	case <-timeout.Done():
@@ -324,33 +306,14 @@ func TestRabbitReconnectOnBadConnection(t *testing.T) {
 	testProcessor := processors[0]
 
 	// Give it a second to attempt connection and fail
-	time.Sleep(1*time.Second)
+	time.Sleep(1 * time.Second)
 
 	// Fix the config
 	testProcessor.Config.RabbitConnectionString = cfg.RabbitConnectionString
 
 	// Try to successfully publish a message using the processors channel within the timeout
 	success := make(chan bool)
-	go func() {
-		for {
-			select {
-			case <-timeout.Done():
-				// Kill this goroutine if the test times out
-				return
-			default:
-				// Repeatedly try to publish a message using the processors channel
-				if len(testProcessor.RabbitChannels) == 0 {
-					continue
-				}
-				channel := testProcessor.RabbitChannels[0]
-				if err := publishToRabbit(channel, cfg.EventsExchange, cfg.ReceiptRoutingKey, `{"test":"message should publish after"}`); err == nil {
-					// We have successfully published a message with the processors re-opened rabbit channel
-					success <- true
-					return
-				}
-			}
-		}
-	}()
+	go attemptPublishOnProcessorsChannel(timeout, testProcessor, success)
 
 	select {
 	case <-timeout.Done():
@@ -417,4 +380,25 @@ func publishToRabbit(channel *amqp.Channel, exchange string, routingKey string, 
 			Body:         []byte(message),
 			DeliveryMode: 2, // 2 = persistent delivery mode
 		})
+}
+
+func attemptPublishOnProcessorsChannel(ctx context.Context, testProcessor *processor.Processor, success chan bool) {
+	for {
+		select {
+		case <-ctx.Done():
+			// Kill this goroutine if the test times out
+			return
+		default:
+			// Repeatedly try to publish a message using the processors channel
+			if len(testProcessor.RabbitChannels) == 0 {
+				continue
+			}
+			channel := testProcessor.RabbitChannels[0]
+			if err := publishToRabbit(channel, cfg.EventsExchange, cfg.ReceiptRoutingKey, `{"test":"message should publish after"}`); err == nil {
+				// We have successfully published a message with the processors re-opened rabbit channel
+				success <- true
+				return
+			}
+		}
+	}
 }

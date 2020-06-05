@@ -155,7 +155,7 @@ func (p *Processor) ManagePublishers(ctx context.Context) {
 			p.startPublishers(ctx, publisherCancel)
 
 			// Sleep for a second here so it doesn't bombard rabbit with reconnection attempts at a ridiculous rate
-			time.Sleep(1*time.Second)
+			time.Sleep(1 * time.Second)
 		case <-ctx.Done():
 			return
 		}
