@@ -11,6 +11,7 @@ import (
 	"github.com/ONSdigital/census-rm-pubsub-adapter/logger"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 	"github.com/pkg/errors"
+	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 	"net/http"
 )
@@ -20,7 +21,7 @@ type messageUnmarshaller func([]byte) (models.InboundMessage, error)
 type messageConverter func(message models.InboundMessage) (*models.RmMessage, error)
 
 type Processor struct {
-	RabbitConn         RabbitConnection
+	RabbitConn         *amqp.Connection
 	RabbitRoutingKey   string
 	RabbitChannels     []RabbitChannel
 	OutboundMsgChan    chan *models.OutboundMessage

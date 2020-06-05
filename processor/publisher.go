@@ -8,11 +8,6 @@ import (
 	"github.com/streadway/amqp"
 )
 
-type RabbitConnection interface {
-	Close() error
-	Channel() (*amqp.Channel, error)
-}
-
 type RabbitChannel interface {
 	Close() error
 	Tx() error

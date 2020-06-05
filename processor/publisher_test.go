@@ -14,24 +14,18 @@ import (
 
 func TestProcessor_Publish_Success(t *testing.T) {
 	// Given
-	testOutboundMessageChannel := make(chan *models.OutboundMessage)
-	processor := &Processor{
-		Logger:           zap.S(),
-		Config:           config.TestConfig,
-		OutboundMsgChan:  testOutboundMessageChannel,
-		RabbitRoutingKey: "test-routing-key",
-	}
+	testProcessor := newTestProcessor()
 	mockSourceMessage := new(MockPubSubMessage)
-	mockSourceMessage.On("Ack").Return()
-
 	mockChannel := new(MockRabbitChannel)
+
 	mockChannel.On("Publish",
-		processor.Config.EventsExchange,
-		processor.RabbitRoutingKey,
+		testProcessor.Config.EventsExchange,
+		testProcessor.RabbitRoutingKey,
 		true,  // Mandatory
 		false, // Immediate
 		mock.Anything).Return(nil)
 	mockChannel.On("TxCommit").Return(nil)
+	mockSourceMessage.On("Ack").Once()
 
 	outboundMessage := models.OutboundMessage{
 		EventMessage: &models.RmMessage{
@@ -43,12 +37,12 @@ func TestProcessor_Publish_Success(t *testing.T) {
 
 	// When
 	// Send it a message to publish
-	go func() { testOutboundMessageChannel <- &outboundMessage }()
+	go func() { testProcessor.OutboundMsgChan <- &outboundMessage }()
 
 	// Run the publisher within a timeout period
 	timeout, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
-	processor.Publish(timeout, mockChannel)
+	testProcessor.Publish(timeout, mockChannel)
 
 	// Then
 	mockChannel.AssertExpectations(t)
@@ -57,25 +51,27 @@ func TestProcessor_Publish_Success(t *testing.T) {
 
 func TestProcessor_Publish_PublishFailure(t *testing.T) {
 	// Given
-
-	testOutboundMessageChannel := make(chan *models.OutboundMessage)
-	processor := &Processor{
-		Logger:           zap.S(),
-		Config:           config.TestConfig,
-		OutboundMsgChan:  testOutboundMessageChannel,
-		RabbitRoutingKey: "test-routing-key",
-	}
+	testProcessor := newTestProcessor()
 	mockSourceMessage := new(MockPubSubMessage)
-	mockSourceMessage.On("Nack").Return()
-
 	mockChannel := new(MockRabbitChannel)
+
+	// Simulate failure to publish the first time it tries to commit, success the second
 	mockChannel.On("Publish",
-		processor.Config.EventsExchange,
-		processor.RabbitRoutingKey,
+		testProcessor.Config.EventsExchange,
+		testProcessor.RabbitRoutingKey,
 		true,  // Mandatory
 		false, // Immediate
-		mock.Anything).Return(errors.New("Publishing failed"))
+		mock.Anything).Return(errors.New("Publishing failed")).Once()
 	mockChannel.On("TxRollback").Return(nil)
+	mockSourceMessage.On("Nack").Once()
+	mockChannel.On("Publish",
+		testProcessor.Config.EventsExchange,
+		testProcessor.RabbitRoutingKey,
+		true,  // Mandatory
+		false, // Immediate
+		mock.Anything).Return(nil).Once()
+	mockChannel.On("TxCommit").Return(nil).Once()
+	mockSourceMessage.On("Ack").Once()
 
 	outboundMessage := models.OutboundMessage{
 		EventMessage: &models.RmMessage{
@@ -86,13 +82,16 @@ func TestProcessor_Publish_PublishFailure(t *testing.T) {
 	}
 
 	// When
-	// Send it a message to publish
-	go func() { testOutboundMessageChannel <- &outboundMessage }()
+	// Send the message in twice to simulate redelivery
+	go func() {
+		testProcessor.OutboundMsgChan <- &outboundMessage
+		testProcessor.OutboundMsgChan <- &outboundMessage
+	}()
 
 	// Run the publisher within a timeout period
 	timeout, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
-	processor.Publish(timeout, mockChannel)
+	testProcessor.Publish(timeout, mockChannel)
 
 	// Then
 	mockChannel.AssertExpectations(t)
@@ -101,25 +100,22 @@ func TestProcessor_Publish_PublishFailure(t *testing.T) {
 
 func TestProcessor_Publish_CommitFailure(t *testing.T) {
 	// Given
-	testOutboundMessageChannel := make(chan *models.OutboundMessage)
-	processor := &Processor{
-		Logger:           zap.S(),
-		Config:           config.TestConfig,
-		OutboundMsgChan:  testOutboundMessageChannel,
-		RabbitRoutingKey: "test-routing-key",
-	}
+	testProcessor := newTestProcessor()
 	mockSourceMessage := new(MockPubSubMessage)
-	mockSourceMessage.On("Nack").Return()
-
 	mockChannel := new(MockRabbitChannel)
+
+	// Simulate failure to commit the first time it tries to commit, success the second
 	mockChannel.On("Publish",
-		processor.Config.EventsExchange,
-		processor.RabbitRoutingKey,
-		true,  // Mandatory
-		false, // Immediate
-		mock.Anything).Return(nil)
-	mockChannel.On("TxCommit").Return(errors.New("Commit failed"))
-	mockChannel.On("TxRollback").Return(nil)
+		testProcessor.Config.EventsExchange,
+		testProcessor.RabbitRoutingKey,
+		true,
+		false,
+		mock.Anything).Return(nil).Twice()
+	mockChannel.On("TxCommit").Return(errors.New("Commit failed")).Once()
+	mockChannel.On("TxRollback").Return(nil).Once()
+	mockSourceMessage.On("Nack").Once()
+	mockChannel.On("TxCommit").Return(nil).Once()
+	mockSourceMessage.On("Ack").Once()
 
 	outboundMessage := models.OutboundMessage{
 		EventMessage: &models.RmMessage{
@@ -130,25 +126,33 @@ func TestProcessor_Publish_CommitFailure(t *testing.T) {
 	}
 
 	// When
-	// Send it a message to publish
-	go func() { testOutboundMessageChannel <- &outboundMessage }()
+	// We send the message in twice to simulate redelivery
+	go func() {
+		testProcessor.OutboundMsgChan <- &outboundMessage
+		testProcessor.OutboundMsgChan <- &outboundMessage
+	}()
 
 	// Run the publisher within a timeout period
 	timeout, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
-	processor.Publish(timeout, mockChannel)
-
-	// Give it a second to make the calls
-	for len(mockSourceMessage.Calls) == 0 {
-	}
+	testProcessor.Publish(timeout, mockChannel)
 
 	// Then
 	mockChannel.AssertExpectations(t)
 	mockSourceMessage.AssertExpectations(t)
 }
 
-// Mocks
+// Helpers
+func newTestProcessor() *Processor {
+	return &Processor{
+		Logger:           zap.S(),
+		Config:           config.TestConfig,
+		OutboundMsgChan:  make(chan *models.OutboundMessage),
+		RabbitRoutingKey: "test-routing-key",
+	}
+}
 
+// Mocks
 type MockPubSubMessage struct {
 	mock.Mock
 }
