@@ -146,8 +146,8 @@ func (p *Processor) publishEventToRabbit(message *models.RmMessage, routingKey s
 	if err := channel.Publish(
 		exchange,
 		routingKey,
-		true,       // mandatory
-		false,      // immediate
+		true,  // mandatory
+		false, // immediate
 		amqp.Publishing{
 			ContentType:  "application/json",
 			Body:         byteMessage,
