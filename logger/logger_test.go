@@ -1,9 +1,9 @@
 package logger
 
 import (
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"reflect"
 	"testing"
 )
 
@@ -17,11 +17,7 @@ func TestGetZapLevel(t *testing.T) {
 func testGetZapLevel(levelString string, expectedLevel zapcore.Level) func(*testing.T) {
 	return func(t *testing.T) {
 		level, err := getZapLevel(levelString)
-		if err != nil {
-			t.Error(err)
-		}
-		if reflect.DeepEqual(level, expectedLevel) {
-			t.Errorf("Level: %s doesn't match expected level: %s", level, expectedLevel)
-		}
+		assert.NoError(t, err)
+		assert.Equal(t, expectedLevel, level.Level())
 	}
 }

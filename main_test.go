@@ -13,6 +13,7 @@ import (
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/processor"
 	"github.com/streadway/amqp"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -29,28 +30,7 @@ func TestMain(m *testing.M) {
 	// These tests interact with data in backing services so cannot be run in parallel
 	runtime.GOMAXPROCS(1)
 	ctx = context.Background()
-	cfg = &config.Configuration{
-		PublishersPerProcessor:          1,
-		RabbitConnectionString:          "amqp://guest:guest@localhost:7672/",
-		ReceiptRoutingKey:               "goTestReceiptQueue",
-		UndeliveredRoutingKey:           "goTestUndeliveredQueue",
-		FulfilmentRoutingKey:            "goTestFulfilmentConfirmedQueue",
-		EqReceiptProject:                "project",
-		EqReceiptSubscription:           "rm-receipt-subscription",
-		EqReceiptTopic:                  "eq-submission-topic",
-		OfflineReceiptProject:           "offline-project",
-		OfflineReceiptSubscription:      "rm-offline-receipt-subscription",
-		OfflineReceiptTopic:             "offline-receipt-topic",
-		PpoUndeliveredProject:           "ppo-undelivered-project",
-		PpoUndeliveredTopic:             "ppo-undelivered-mail-topic",
-		PpoUndeliveredSubscription:      "rm-ppo-undelivered-subscription",
-		QmUndeliveredProject:            "qm-undelivered-project",
-		QmUndeliveredTopic:              "qm-undelivered-mail-topic",
-		QmUndeliveredSubscription:       "rm-qm-undelivered-subscription",
-		FulfilmentConfirmedProject:      "fulfilment-confirmed-project",
-		FulfilmentConfirmedSubscription: "fulfilment-subscription",
-		FulfilmentConfirmedTopic:        "fulfilment-topic",
-	}
+	cfg = config.TestConfig
 	code := m.Run()
 	os.Exit(code)
 }
@@ -89,8 +69,10 @@ func TestMessageProcessing(t *testing.T) {
 
 func testMessageProcessing(messageToSend string, expectedRabbitMessage string, topic string, project string, rabbitRoutingKey string) func(t *testing.T) {
 	return func(t *testing.T) {
-		if _, err := StartProcessors(ctx, cfg, make(chan error)); err != nil {
-			t.Error(err)
+		timeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if _, err := StartProcessors(timeout, cfg, make(chan error)); err != nil {
+			assert.NoError(t, err)
 			return
 		}
 
@@ -98,12 +80,9 @@ func testMessageProcessing(messageToSend string, expectedRabbitMessage string, t
 		defer rabbitCh.Close()
 		defer rabbitConn.Close()
 		if _, err := rabbitCh.QueuePurge(rabbitRoutingKey, false); err != nil {
-			t.Error(err)
+			assert.NoError(t, err)
 			return
 		}
-
-		timeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
 
 		// When
 		if messageId, err := publishMessageToPubSub(timeout, messageToSend, topic, project); err != nil {
@@ -112,15 +91,12 @@ func testMessageProcessing(messageToSend string, expectedRabbitMessage string, t
 		}
 
 		rabbitMessage, err := getFirstMessageOnQueue(timeout, rabbitRoutingKey, rabbitCh)
-		if err != nil {
-			t.Error(err)
+		if !assert.NoErrorf(t, err, "Did not find message on queue %s", rabbitRoutingKey) {
 			return
 		}
 
 		// Then
-		if rabbitMessage != expectedRabbitMessage {
-			t.Errorf("Rabbit messsage incorrect - \nexpected: %s \nactual: %s", expectedRabbitMessage, rabbitMessage)
-		}
+		assert.Equal(t, expectedRabbitMessage, rabbitMessage)
 	}
 }
 
@@ -136,6 +112,9 @@ func testMessageQuarantining(messageToSend string, testDescription string, t *te
 	var requests []*http.Request
 	var requestBody []byte
 
+	timeout, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
 	mockResult := "Success!"
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
@@ -147,15 +126,21 @@ func testMessageQuarantining(messageToSend string, testDescription string, t *te
 
 	cfg.QuarantineMessageUrl = srv.URL
 
-	t.Run(testDescription, testMessageProcessingQuarantine(
-		messageToSend,
-		cfg.EqReceiptTopic, cfg.EqReceiptProject))
+	if _, err := StartProcessors(timeout, cfg, make(chan error)); err != nil {
+		assert.NoError(t, err)
+		return
+	}
+
+	// When
+	if _, err := publishMessageToPubSub(timeout, messageToSend, cfg.EqReceiptTopic, cfg.EqReceiptProject); err != nil {
+		t.Errorf("Failed to publish message to PubSub, err: %s", err)
+		return
+	}
 
 	// Allow a second for the processor to process the message
 	time.Sleep(1 * time.Second)
 
-	if len(requests) != 1 {
-		t.Errorf("Unexpected number of calls to Exception Manager")
+	if !assert.Len(t, requests, 1, "Unexpected number of calls to Exception Manager") {
 		return
 	}
 
@@ -166,61 +151,28 @@ func testMessageQuarantining(messageToSend string, testDescription string, t *te
 		return
 	}
 
-	if !assertEqual("application/json", quarantineBody.ContentType, "Dodgy content type", t) ||
-		!assertEqual("Error unmarshalling message", quarantineBody.ExceptionClass, "Dodgy exception class", t) ||
-		!assertEqual(1, len(quarantineBody.Headers), "Dodgy headers", t) ||
-		!assertEqual(64, len(quarantineBody.MessageHash), "Dodgy message hash", t) ||
-		!assertEqual(messageToSend, string(quarantineBody.MessagePayload), "Dodgy message payload", t) ||
-		!assertEqual(cfg.EqReceiptSubscription, quarantineBody.Queue, "Dodgy quarantine queue", t) ||
-		!assertEqual("none", quarantineBody.RoutingKey, "Dodgy routing key", t) ||
-		!assertEqual("Pubsub Adapter", quarantineBody.Service, "Dodgy routing key", t) {
-		return
-	}
-
-	if len(quarantineBody.Headers["pubSubId"]) == 0 {
-		t.Errorf("Dodgy pubSubId header, expected non-zero length")
-		return
-	}
-}
-
-func assertEqual(expected interface{}, actual interface{}, feedback string, t *testing.T) bool {
-	if expected != actual {
-		t.Errorf("%v, expected %v, actual %v", feedback, expected, actual)
-		return false
-	}
-
-	return true
-}
-
-func testMessageProcessingQuarantine(messageToSend string, topic string, project string) func(t *testing.T) {
-	return func(t *testing.T) {
-		if _, err := StartProcessors(ctx, cfg, make(chan error)); err != nil {
-			t.Error(err)
-			return
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		// When
-		if messageId, err := publishMessageToPubSub(ctx, messageToSend, topic, project); err != nil {
-			t.Errorf("PubSub publish fail, project: %s, topic: %s, id: %s, error: %s", project, topic, messageId, err)
-			return
-		}
-
-	}
+	assert.Equal(t, "application/json", quarantineBody.ContentType, "Dodgy content type")
+	assert.Equal(t, "Error unmarshalling message", quarantineBody.ExceptionClass, "Dodgy exception class")
+	assert.Equal(t, messageToSend, string(quarantineBody.MessagePayload), "Dodgy message payload")
+	assert.Equal(t, cfg.EqReceiptSubscription, quarantineBody.Queue, "Dodgy quarantine queue")
+	assert.Equal(t, "none", quarantineBody.RoutingKey, "Dodgy routing key")
+	assert.Equal(t, "Pubsub Adapter", quarantineBody.Service, "Dodgy routing key")
+	assert.Len(t, quarantineBody.MessageHash, 64, "Dodgy message hash")
+	assert.Len(t, quarantineBody.Headers, 1, "Dodgy headers")
+	assert.Contains(t, quarantineBody.Headers, "pubSubId", "Dodgy headers, missing pubSubId")
+	assert.False(t, len(quarantineBody.Headers["pubSubId"]) == 0, "Dodgy pubSubId header, expected non-zero length")
 }
 
 func TestStartProcessors(t *testing.T) {
-	processors, err := StartProcessors(ctx, cfg, make(chan error))
+	timeout, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	processors, err := StartProcessors(timeout, cfg, make(chan error))
 	if err != nil {
-		t.Error(err)
+		assert.NoError(t, err)
 		return
 	}
 
-	if len(processors) != 5 {
-		t.Errorf("StartProcessors should return 5 processors, actually returned %d", len(processors))
-	}
+	assert.Len(t, processors, 5, "StartProcessors should return 5 processors")
 }
 
 func TestRabbitReconnectOnChannelDeath(t *testing.T) {
@@ -230,7 +182,7 @@ func TestRabbitReconnectOnChannelDeath(t *testing.T) {
 	// Start up the processors normally
 	processors, err := StartProcessors(timeout, cfg, make(chan error))
 	if err != nil {
-		t.Error(err)
+		assert.NoError(t, err)
 		return
 	}
 
@@ -238,7 +190,7 @@ func TestRabbitReconnectOnChannelDeath(t *testing.T) {
 	testProcessor := processors[0]
 
 	// Pick one of the processors rabbit channels
-	var channel *amqp.Channel
+	var channel processor.RabbitChannel
 	for channel == nil {
 		select {
 		case <-timeout.Done():
@@ -255,7 +207,7 @@ func TestRabbitReconnectOnChannelDeath(t *testing.T) {
 
 	// Check the processors rabbit channel can publish
 	if err := publishToRabbit(channel, cfg.EventsExchange, cfg.ReceiptRoutingKey, `{"test":"message should publish before"}`); err != nil {
-		t.Error(err)
+		assert.NoError(t, err)
 		return
 	}
 
@@ -264,7 +216,7 @@ func TestRabbitReconnectOnChannelDeath(t *testing.T) {
 	// mis-configured for this to occur, and the channel closing is only an undesirable side effect.
 	// It is, however, the only viable way of inducing a channel close that I could think of using to exercise this code.
 	if err := publishToRabbit(channel, "this_exchange_should_not_exist", cfg.ReceiptRoutingKey, `{"test":"message should fail"}`); err != nil {
-		t.Error(err)
+		assert.NoError(t, err)
 		return
 	}
 
@@ -299,7 +251,7 @@ func TestRabbitReconnectOnBadConnection(t *testing.T) {
 	// Start up the processors normally
 	processors, err := StartProcessors(timeout, &brokenCfg, make(chan error))
 	if err != nil {
-		t.Error(err)
+		assert.NoError(t, err)
 		return
 	}
 	// Take the first processor
@@ -369,7 +321,7 @@ func connectToRabbitChannel() (conn *amqp.Connection, ch *amqp.Channel, err erro
 	return rabbitConn, rabbitChan, nil
 }
 
-func publishToRabbit(channel *amqp.Channel, exchange string, routingKey string, message string) error {
+func publishToRabbit(channel processor.RabbitChannel, exchange string, routingKey string, message string) error {
 	return channel.Publish(
 		exchange,
 		routingKey,

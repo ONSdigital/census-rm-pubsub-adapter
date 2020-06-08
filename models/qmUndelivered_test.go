@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -26,11 +27,14 @@ func testQmUndeliveredValidate(msgJson string, valid bool) func(*testing.T) {
 	return func(t *testing.T) {
 		qmUndelivered := QmUndelivered{}
 		if err := json.Unmarshal([]byte(msgJson), &qmUndelivered); err != nil {
-			t.Error(err)
+			assert.NoError(t, err)
 			return
 		}
-		if err := qmUndelivered.Validate(); !valid && err == nil || valid && err != nil {
-			t.Errorf("Got err: %s", err)
+		err := qmUndelivered.Validate()
+		if valid {
+			assert.NoError(t, err, "Validation failed for valid message")
+		} else {
+			assert.Error(t, err, "Validate did not error for invalid message")
 		}
 	}
 }

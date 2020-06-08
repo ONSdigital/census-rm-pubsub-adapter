@@ -2,7 +2,7 @@ package processor
 
 import (
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
-	"reflect"
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
@@ -36,7 +36,5 @@ func TestConvertEqReceiptToRmMessage(t *testing.T) {
 		t.Errorf("failed: %s", err)
 	}
 
-	if !reflect.DeepEqual(expectedRabbitMessage, *rabbitMessage) {
-		t.Errorf("Incorrect Rabbit message structure \nexpected:%+v \nactual:%+v", expectedRabbitMessage, rabbitMessage)
-	}
+	assert.Equal(t, expectedRabbitMessage, *rabbitMessage, "Incorrect Rabbit message structure")
 }

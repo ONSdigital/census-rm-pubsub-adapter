@@ -13,7 +13,7 @@ func NewEqReceiptProcessor(ctx context.Context, appConfig *config.Configuration,
 	return NewProcessor(ctx, appConfig, appConfig.EqReceiptProject, appConfig.EqReceiptSubscription, appConfig.ReceiptRoutingKey, convertEqReceiptToRmMessage, unmarshalEqReceipt, errChan)
 }
 
-func unmarshalEqReceipt(data []byte) (models.PubSubMessage, error) {
+func unmarshalEqReceipt(data []byte) (models.InboundMessage, error) {
 	var eqReceipt models.EqReceipt
 	if err := json.Unmarshal(data, &eqReceipt); err != nil {
 		return nil, err
@@ -25,7 +25,7 @@ func unmarshalEqReceipt(data []byte) (models.PubSubMessage, error) {
 	return eqReceipt, nil
 }
 
-func convertEqReceiptToRmMessage(receipt models.PubSubMessage) (*models.RmMessage, error) {
+func convertEqReceiptToRmMessage(receipt models.InboundMessage) (*models.RmMessage, error) {
 	eqReceipt, ok := receipt.(models.EqReceipt)
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("Wrong message model given to convertEqReceiptToRmMessage: %T, only accepts EqReceipt, tx_id: %q", receipt, receipt.GetTransactionId()))

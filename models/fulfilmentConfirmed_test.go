@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -40,11 +41,14 @@ func testFulfilmentConfirmedValidate(msgJson string, valid bool) func(*testing.T
 	return func(t *testing.T) {
 		fulfilmentConfirmed := FulfilmentConfirmed{}
 		if err := json.Unmarshal([]byte(msgJson), &fulfilmentConfirmed); err != nil {
-			t.Error(err)
+			assert.NoError(t, err)
 			return
 		}
-		if err := fulfilmentConfirmed.Validate(); !valid && err == nil || valid && err != nil {
-			t.Errorf("Got err: %s", err)
+		err := fulfilmentConfirmed.Validate()
+		if valid {
+			assert.NoError(t, err, "Validation failed for valid message")
+		} else {
+			assert.Error(t, err, "Validate did not error for invalid message")
 		}
 	}
 }

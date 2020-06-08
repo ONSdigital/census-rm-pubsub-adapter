@@ -1,6 +1,6 @@
 package models
 
-type PubSubMessage interface {
+type InboundMessage interface {
 	GetTransactionId() string
 	Validate() error
 }

@@ -1,7 +1,7 @@
 package models
 
 import (
-	"reflect"
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
@@ -21,18 +21,13 @@ func testUnmarshalJSON(timeBuf []byte, expectedTime *time.Time) func(t *testing.
 
 		hazyUtcTime := HazyUtcTime{}
 		if err := hazyUtcTime.UnmarshalJSON(timeBuf); err != nil {
-			t.Error(err)
+			assert.NoError(t, err)
 			return
 		}
-
-		if reflect.DeepEqual(expectedTime, hazyUtcTime) {
-			t.Errorf("Expected time: %s, got: %s", expectedTime, hazyUtcTime)
-		}
+		assert.Equal(t, expectedTime.UTC(), hazyUtcTime.UTC())
 
 		_, actualTzOffset := hazyUtcTime.Zone()
 		_, expectedTzOffset := expectedTime.Zone()
-		if actualTzOffset != expectedTzOffset {
-			t.Errorf("Expected TZ offset: %d, got: %d", expectedTzOffset, actualTzOffset)
-		}
+		assert.Equal(t, expectedTzOffset, actualTzOffset)
 	}
 }
