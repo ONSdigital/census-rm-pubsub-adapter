@@ -145,7 +145,7 @@ func (p *Processor) publishEventToRabbit(message *models.RmMessage, routingKey s
 
 	if err := channel.Publish(
 		exchange,
-		routingKey, // routing key (the queue)
+		routingKey,
 		true,       // mandatory
 		false,      // immediate
 		amqp.Publishing{
