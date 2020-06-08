@@ -41,7 +41,7 @@ func testFulfilmentConfirmedValidate(msgJson string, valid bool) func(*testing.T
 	return func(t *testing.T) {
 		fulfilmentConfirmed := FulfilmentConfirmed{}
 		if err := json.Unmarshal([]byte(msgJson), &fulfilmentConfirmed); err != nil {
-			t.Error(err)
+			assert.NoError(t, err)
 			return
 		}
 		err := fulfilmentConfirmed.Validate()

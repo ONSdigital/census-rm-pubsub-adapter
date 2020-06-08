@@ -72,7 +72,7 @@ func testMessageProcessing(messageToSend string, expectedRabbitMessage string, t
 		timeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		if _, err := StartProcessors(timeout, cfg, make(chan error)); err != nil {
-			t.Error(err)
+			assert.NoError(t, err)
 			return
 		}
 
@@ -80,7 +80,7 @@ func testMessageProcessing(messageToSend string, expectedRabbitMessage string, t
 		defer rabbitCh.Close()
 		defer rabbitConn.Close()
 		if _, err := rabbitCh.QueuePurge(rabbitRoutingKey, false); err != nil {
-			t.Error(err)
+			assert.NoError(t, err)
 			return
 		}
 
@@ -127,7 +127,7 @@ func testMessageQuarantining(messageToSend string, testDescription string, t *te
 	cfg.QuarantineMessageUrl = srv.URL
 
 	if _, err := StartProcessors(timeout, cfg, make(chan error)); err != nil {
-		t.Error(err)
+		assert.NoError(t, err)
 		return
 	}
 
@@ -168,7 +168,7 @@ func TestStartProcessors(t *testing.T) {
 	defer cancel()
 	processors, err := StartProcessors(timeout, cfg, make(chan error))
 	if err != nil {
-		t.Error(err)
+		assert.NoError(t, err)
 		return
 	}
 
@@ -182,7 +182,7 @@ func TestRabbitReconnectOnChannelDeath(t *testing.T) {
 	// Start up the processors normally
 	processors, err := StartProcessors(timeout, cfg, make(chan error))
 	if err != nil {
-		t.Error(err)
+		assert.NoError(t, err)
 		return
 	}
 
@@ -207,7 +207,7 @@ func TestRabbitReconnectOnChannelDeath(t *testing.T) {
 
 	// Check the processors rabbit channel can publish
 	if err := publishToRabbit(channel, cfg.EventsExchange, cfg.ReceiptRoutingKey, `{"test":"message should publish before"}`); err != nil {
-		t.Error(err)
+		assert.NoError(t, err)
 		return
 	}
 
@@ -216,7 +216,7 @@ func TestRabbitReconnectOnChannelDeath(t *testing.T) {
 	// mis-configured for this to occur, and the channel closing is only an undesirable side effect.
 	// It is, however, the only viable way of inducing a channel close that I could think of using to exercise this code.
 	if err := publishToRabbit(channel, "this_exchange_should_not_exist", cfg.ReceiptRoutingKey, `{"test":"message should fail"}`); err != nil {
-		t.Error(err)
+		assert.NoError(t, err)
 		return
 	}
 
@@ -251,7 +251,7 @@ func TestRabbitReconnectOnBadConnection(t *testing.T) {
 	// Start up the processors normally
 	processors, err := StartProcessors(timeout, &brokenCfg, make(chan error))
 	if err != nil {
-		t.Error(err)
+		assert.NoError(t, err)
 		return
 	}
 	// Take the first processor

@@ -22,7 +22,7 @@ func TestReady(t *testing.T) {
 
 	err = os.RemoveAll(testDir)
 	if err != nil {
-		t.Error(err)
+		assert.NoError(t, err)
 	}
 
 }
@@ -35,7 +35,7 @@ func testReadinessFiles(t *testing.T) {
 	// When
 	err := Ready(ctx, readinessFilePath)
 	if err != nil {
-		t.Error(err)
+		assert.NoError(t, err)
 		return
 	}
 
@@ -60,7 +60,7 @@ func testReadinessFiles(t *testing.T) {
 				return
 			}
 			// Error the test on any other error
-			t.Error(err)
+			assert.NoError(t, err)
 			return
 		}
 

@@ -27,7 +27,7 @@ func testQmUndeliveredValidate(msgJson string, valid bool) func(*testing.T) {
 	return func(t *testing.T) {
 		qmUndelivered := QmUndelivered{}
 		if err := json.Unmarshal([]byte(msgJson), &qmUndelivered); err != nil {
-			t.Error(err)
+			assert.NoError(t, err)
 			return
 		}
 		err := qmUndelivered.Validate()

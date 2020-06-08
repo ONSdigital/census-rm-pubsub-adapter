@@ -27,7 +27,7 @@ func testEqReceiptValidate(msgJson string, valid bool) func(*testing.T) {
 	return func(t *testing.T) {
 		eqReceipt := EqReceipt{}
 		if err := json.Unmarshal([]byte(msgJson), &eqReceipt); err != nil {
-			t.Error(err)
+			assert.NoError(t, err)
 			return
 		}
 		err := eqReceipt.Validate()

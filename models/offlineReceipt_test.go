@@ -27,7 +27,7 @@ func testOfflineReceiptValidate(msgJson string, valid bool) func(*testing.T) {
 	return func(t *testing.T) {
 		offlineReceipt := OfflineReceipt{}
 		if err := json.Unmarshal([]byte(msgJson), &offlineReceipt); err != nil {
-			t.Error(err)
+			assert.NoError(t, err)
 			return
 		}
 		err := offlineReceipt.Validate()
