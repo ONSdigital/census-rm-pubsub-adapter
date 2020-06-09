@@ -8,7 +8,7 @@ import (
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 )
 
-func NewEqReceiptProcessor(ctx context.Context, appConfig *config.Configuration, errChan chan error) (*Processor, error) {
+func NewEqReceiptProcessor(ctx context.Context, appConfig *config.Configuration, errChan chan Error) (*Processor, error) {
 	return NewProcessor(ctx, appConfig, appConfig.EqReceiptProject, appConfig.EqReceiptSubscription, appConfig.ReceiptRoutingKey, convertEqReceiptToRmMessage, unmarshalEqReceipt, errChan)
 }
 

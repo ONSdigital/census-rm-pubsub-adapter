@@ -20,18 +20,28 @@ type messageUnmarshaller func([]byte) (models.InboundMessage, error)
 
 type messageConverter func(message models.InboundMessage) (*models.RmMessage, error)
 
+type Error struct {
+	Err error
+	*Processor
+}
+
 type Processor struct {
-	RabbitConn         *amqp.Connection
-	RabbitRoutingKey   string
-	RabbitChannels     []RabbitChannel
-	OutboundMsgChan    chan *models.OutboundMessage
-	Config             *config.Configuration
-	PubSubClient       *pubsub.Client
-	PubSubSubscription *pubsub.Subscription
-	unmarshallMessage  messageUnmarshaller
-	convertMessage     messageConverter
-	ErrChan            chan error
-	Logger             *zap.SugaredLogger
+	Name                 string
+	RabbitConn           *amqp.Connection
+	RabbitRoutingKey     string
+	RabbitChannels       []RabbitChannel
+	OutboundMsgChan      chan *models.OutboundMessage
+	Config               *config.Configuration
+	PubSubProject        string
+	PubSubSubscriptionId string
+	PubSubClient         *pubsub.Client
+	PubSubSubscription   *pubsub.Subscription
+	unmarshallMessage    messageUnmarshaller
+	convertMessage       messageConverter
+	ErrChan              chan Error
+	Logger               *zap.SugaredLogger
+	Context              context.Context
+	Cancel               context.CancelFunc
 }
 
 func NewProcessor(ctx context.Context,
@@ -40,9 +50,11 @@ func NewProcessor(ctx context.Context,
 	pubSubSubscription string,
 	routingKey string,
 	messageConverter messageConverter,
-	messageUnmarshaller messageUnmarshaller, errChan chan error) (*Processor, error) {
-	var err error
+	messageUnmarshaller messageUnmarshaller, errChan chan Error) (*Processor, error) {
 	p := &Processor{}
+	p.Name = pubSubSubscription + ">" + routingKey
+	p.PubSubSubscriptionId = pubSubSubscription
+	p.PubSubProject = pubSubProject
 	p.Config = appConfig
 	p.RabbitRoutingKey = routingKey
 	p.convertMessage = messageConverter
@@ -50,32 +62,53 @@ func NewProcessor(ctx context.Context,
 	p.ErrChan = errChan
 	p.OutboundMsgChan = make(chan *models.OutboundMessage)
 	p.RabbitChannels = make([]RabbitChannel, 0)
-	p.Logger = logger.Logger.With("subscription", pubSubSubscription)
+	p.Logger = logger.Logger.With("processor", p.Name)
 
-	// Setup PubSub connection
-	p.PubSubClient, err = pubsub.NewClient(ctx, pubSubProject)
-	if err != nil {
-		return nil, errors.Wrap(err, "error settings up PubSub client")
+	if err := p.Initialise(ctx); err != nil {
+		return nil, err
 	}
-
-	// Setup subscription
-	p.PubSubSubscription = p.PubSubClient.Subscription(pubSubSubscription)
-
-	// Start consuming from PubSub
-	p.Logger.Infow("Launching PubSub message receiver")
-	go p.Consume(ctx)
-
-	// Start and manage publisher workers
-	go p.ManagePublishers(ctx)
 
 	return p, nil
 }
 
-func (p *Processor) Consume(ctx context.Context) {
-	err := p.PubSubSubscription.Receive(ctx, p.Process)
+func (p *Processor) Initialise(ctx context.Context) (err error) {
+	// Set up context
+	p.Context, p.Cancel = context.WithCancel(ctx)
+
+	// Initialise PubSub
+	if err := p.initPubSub(); err != nil {
+		return err
+	}
+
+	// Initialise consuming from PubSub
+	p.Logger.Infow("Launching PubSub message receiver")
+	go p.Consume()
+
+	// Initialise and manage publisher workers
+	go p.startPublishers(ctx)
+	return nil
+}
+
+func (p *Processor) initPubSub() (err error) {
+	// Set up PubSub connection
+	p.PubSubClient, err = pubsub.NewClient(p.Context, p.PubSubProject)
+	if err != nil {
+		return errors.Wrap(err, "error settings up PubSub client")
+	}
+
+	// Set up PubSub subscription
+	p.PubSubSubscription = p.PubSubClient.Subscription(p.PubSubSubscriptionId)
+	return nil
+}
+
+func (p *Processor) Consume() {
+	err := p.PubSubSubscription.Receive(p.Context, p.Process)
 	if err != nil {
 		p.Logger.Errorw("Error in consumer", "error", err)
-		p.ErrChan <- err
+		p.ErrChan <- Error{
+			Err:       err,
+			Processor: p,
+		}
 	}
 }
 
@@ -136,4 +169,10 @@ func (p *Processor) quarantineMessage(message *pubsub.Message) error {
 
 	p.Logger.Debugw("Quarantined message", "data", string(message.Data))
 	return nil
+}
+
+func (p *Processor) Stop() {
+	p.Logger.Debug("Stopping processor")
+	p.Cancel()
+	p.CloseRabbit(false)
 }

@@ -33,11 +33,17 @@ func main() {
 	signal.Notify(signals, os.Interrupt)
 
 	// Channel for goroutines to notify main of errors
-	errChan := make(chan error)
+	errChan := make(chan processor.Error)
 
 	processors, err := StartProcessors(ctx, appConfig, errChan)
 	if err != nil {
 		logger.Logger.Errorw("Error starting processors", "error", err)
+		shutdown(ctx, cancel, processors)
+	}
+
+	// Wait for processors to start properly
+	if err := waitForStartup(ctx, errChan); err != nil {
+		logger.Logger.Info("Shutting down due to start up error")
 		shutdown(ctx, cancel, processors)
 	}
 	// Indicate readiness
@@ -46,52 +52,87 @@ func main() {
 		logger.Logger.Errorw("Error indicating readiness", "error", err)
 		shutdown(ctx, cancel, processors)
 	}
+	defer shutdown(ctx, cancel, processors)
 
 	// Block until we receive OS shutdown signal or error
-	select {
-	case sig := <-signals:
-		logger.Logger.Infow("OS Signal Received", "signal", sig.String())
-	case err := <-errChan:
-		// TODO Make some attempt to restart receivers so one error doesn't kill them all immediately
-		logger.Logger.Errorw("Error Received", "error", err)
-	}
+	RunLoop(ctx, appConfig, signals, errChan)
+}
 
-	shutdown(ctx, cancel, processors)
+func RunLoop(ctx context.Context, cfg *config.Configuration, signals chan os.Signal, errChan chan processor.Error) {
+	for {
+		select {
+		case sig := <-signals:
+			logger.Logger.Infow("OS Signal Received", "signal", sig.String())
+			return
+		case processorErr := <-errChan:
+			logger.Logger.Errorw("Processor error received", "error", processorErr.Err, "processor", processorErr.Name)
+			processorErr.Stop()
+			//if err := readiness.Unready(cfg.ReadinessFilePath); err != nil {
+			//	logger.Logger.Errorw("Error showing not ready", "error", err)
+			//}
+			if err := processorErr.Initialise(ctx); err != nil {
+				logger.Logger.Errorw("Failed to restart processor", "error", err, "processor", processorErr.Name)
+				go QueueError(processor.Error{
+					Err: err,
+					Processor: processorErr.Processor,
+				}, errChan)
+			} else if err := waitForStartup(ctx, errChan); err != nil {
+				go QueueError(processor.Error{
+					Err: err,
+					Processor: processorErr.Processor,
+				}, errChan)
+			}
+
+			// Limit the rate of restarts
+			time.Sleep(1 * time.Second)
+
+			//if err := readiness.Ready(ctx, cfg.ReadinessFilePath); err != nil {
+			//	logger.Logger.Errorw("Error showing ready", "error", err)
+			//}
+		}
+	}
+}
+
+func QueueError(err processor.Error, errChan chan processor.Error) {
+	errChan <- err
+}
+
+func RestartProcessor(ctx context.Context, p *processor.Processor, errChan chan processor.Error) {
 
 }
 
-func StartProcessors(ctx context.Context, cfg *config.Configuration, errChan chan error) ([]*processor.Processor, error) {
+func StartProcessors(ctx context.Context, cfg *config.Configuration, errChan chan processor.Error) ([]*processor.Processor, error) {
 	processors := make([]*processor.Processor, 0)
 
-	// Start EQ receipt processing
+	// Initialise EQ receipt processing
 	eqReceiptProcessor, err := processor.NewEqReceiptProcessor(ctx, cfg, errChan)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error starting eQ receipt processor")
 	}
 	processors = append(processors, eqReceiptProcessor)
 
-	// Start offline receipt processing
+	// Initialise offline receipt processing
 	offlineReceiptProcessor, err := processor.NewOfflineReceiptProcessor(ctx, cfg, errChan)
 	if err != nil {
 		return processors, errors.Wrap(err, "Error starting offline receipt processor")
 	}
 	processors = append(processors, offlineReceiptProcessor)
 
-	// Start PPO undelivered processing
+	// Initialise PPO undelivered processing
 	ppoUndeliveredProcessor, err := processor.NewPpoUndeliveredProcessor(ctx, cfg, errChan)
 	if err != nil {
 		return processors, errors.Wrap(err, "Error starting PPO undelivered processor")
 	}
 	processors = append(processors, ppoUndeliveredProcessor)
 
-	// Start QM undelivered processing
+	// Initialise QM undelivered processing
 	qmUndeliveredProcessor, err := processor.NewQmUndeliveredProcessor(ctx, cfg, errChan)
 	if err != nil {
 		return processors, errors.Wrap(err, "Error starting QM undelivered processor")
 	}
 	processors = append(processors, qmUndeliveredProcessor)
 
-	// Start fulfilment confirmed processing
+	// Initialise fulfilment confirmed processing
 	fulfilmentConfirmedProcessor, err := processor.NewFulfilmentConfirmedProcessor(ctx, cfg, errChan)
 	if err != nil {
 		return processors, errors.Wrap(err, "Error starting fulfilment confirmed processor")
@@ -105,6 +146,19 @@ func StartProcessors(ctx context.Context, cfg *config.Configuration, errChan cha
 	processors = append(processors, eqFulfilmentProcessor)
 
 	return processors, nil
+}
+
+func waitForStartup(ctx context.Context, errChan chan processor.Error) error {
+	startupTimer, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	select {
+	case processorError := <-errChan:
+		processorError.Logger.Errorw("Processor errored during startup period", "error", processorError.Err)
+		return processorError.Err
+	case <-startupTimer.Done():
+		logger.Logger.Debug("Startup complete")
+		return nil
+	}
 }
 
 func shutdown(ctx context.Context, cancel context.CancelFunc, processors []*processor.Processor) {

@@ -226,7 +226,7 @@ func TestRabbitReconnectOnChannelDeath(t *testing.T) {
 	timeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Start up the processors normally
+	// Initialise up the processors normally
 	processors, err := StartProcessors(timeout, cfg, make(chan error))
 	if err != nil {
 		assert.NoError(t, err)
@@ -295,7 +295,7 @@ func TestRabbitReconnectOnBadConnection(t *testing.T) {
 	brokenCfg := *cfg
 	brokenCfg.RabbitConnectionString = "bad-connection-string"
 
-	// Start up the processors normally
+	// Initialise up the processors normally
 	processors, err := StartProcessors(timeout, &brokenCfg, make(chan error))
 	if err != nil {
 		assert.NoError(t, err)

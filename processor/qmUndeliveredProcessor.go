@@ -8,7 +8,7 @@ import (
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 )
 
-func NewQmUndeliveredProcessor(ctx context.Context, appConfig *config.Configuration, errChan chan error) (*Processor, error) {
+func NewQmUndeliveredProcessor(ctx context.Context, appConfig *config.Configuration, errChan chan Error) (*Processor, error) {
 	return NewProcessor(ctx, appConfig, appConfig.QmUndeliveredProject, appConfig.QmUndeliveredSubscription, appConfig.UndeliveredRoutingKey, convertQmUndeliveredToRmMessage, unmarshalQmUndelivered, errChan)
 }
 
