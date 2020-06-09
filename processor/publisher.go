@@ -29,7 +29,7 @@ func (p *Processor) initRabbitConnection() error {
 	return nil
 }
 
-func (p *Processor) initRabbitChannel() (RabbitChannel, error) {
+func (p *Processor) initRabbitChannel(aggregateRabbitErrs chan *amqp.Error) (RabbitChannel, error) {
 	var err error
 	var channel *amqp.Channel
 
@@ -46,30 +46,42 @@ func (p *Processor) initRabbitChannel() (RabbitChannel, error) {
 
 	// Set up handler to attempt to reopen channel on channel close
 	// Listen for errors on the rabbit channel to handle both channel specific and connection wide exceptions
-	channelErrChan := make(chan *amqp.Error)
-	go func() {
-		select {
-		case channelErr := <-channelErrChan:
+	rabbitChannelErrs := make(chan *amqp.Error)
+	go p.handleRabbitChannelErrors(rabbitChannelErrs, aggregateRabbitErrs)
+	channel.NotifyClose(rabbitChannelErrs)
+	p.RabbitChannels = append(p.RabbitChannels, channel)
 
-		// TODO handle reconnecting in graceful processor restart rather than a direct call to reinitialize here
-		if channelErr != nil {
-			p.Logger.Errorw("received rabbit channel error", "error", channelErr)
-			p.ErrChan <- Error{
-				Err:       channelErr,
-				Processor: p,
+	return channel, nil
+}
+
+func (p *Processor) handleRabbitChannelErrors(rabbitChannelErrs, aggregateRabbitErrs chan *amqp.Error) {
+	select {
+	case rabbitErr := <-rabbitChannelErrs:
+		if rabbitErr != nil {
+			p.Logger.Errorw("received rabbit channel error", "error", rabbitErr)
+			// Non blocking write to aggregate errors channel, we only case about the first because the processor is restarted anyway
+			select {
+			case aggregateRabbitErrs <- rabbitErr:
+			default:
 			}
 		} else {
 			p.Logger.Debug("Rabbit channel shutting down")
 		}
-		case <-p.Context.Done():
-			return
+	case <-p.Context.Done():
+		return
+	}
+}
+
+func (p *Processor) aggregateRabbitErrors(rabbitErrChan chan *amqp.Error) {
+	select {
+	case err := <-rabbitErrChan:
+		p.ErrChan <- Error{
+			Err:       err,
+			Processor: p,
 		}
-
-	}()
-	channel.NotifyClose(channelErrChan)
-	p.RabbitChannels = append(p.RabbitChannels, channel)
-
-	return channel, nil
+	case <-p.Context.Done():
+		return
+	}
 }
 
 func (p *Processor) startPublishers(ctx context.Context) {
@@ -84,16 +96,18 @@ func (p *Processor) startPublishers(ctx context.Context) {
 	}
 
 	p.RabbitChannels = make([]RabbitChannel, 0)
+	aggregateErrs := make(chan *amqp.Error)
 
 	for i := 0; i < p.Config.PublishersPerProcessor; i++ {
 
 		// Open a rabbit channel for each publisher worker
-		channel, err := p.initRabbitChannel()
+		channel, err := p.initRabbitChannel(aggregateErrs)
 		if err != nil {
 			return
 		}
 		go p.Publish(ctx, channel)
 	}
+	go p.aggregateRabbitErrors(aggregateErrs)
 }
 
 func (p *Processor) Publish(ctx context.Context, channel RabbitChannel) {
