@@ -176,3 +176,19 @@ func (p *Processor) Stop() {
 	p.Cancel()
 	p.CloseRabbit(false)
 }
+
+func (p *Processor) Restart(ctx context.Context) {
+	p.Stop()
+	if err := p.Initialise(ctx); err != nil {
+		logger.Logger.Errorw("Failed to restart processor", "error", err, "processor", p.Name)
+		go p.QueueError(err)
+	}
+
+}
+
+func (p *Processor) QueueError(err error) {
+	p.ErrChan <- Error{
+		Err:       err,
+		Processor: p,
+	}
+}

@@ -11,6 +11,7 @@ type Configuration struct {
 	LogLevel               string `envconfig:"LOG_LEVEL" default:"ERROR"`
 	QuarantineMessageUrl   string `envconfig:"QUARANTINE_MESSAGE_URL"  required:"true"`
 	PublishersPerProcessor int    `envconfig:"PUBLISHERS_PER_PROCESSOR" default:"20"`
+	RestartTimeout         int    `envconfig:"RESTART_TIMEOUT" default:"120"`
 
 	// Rabbit
 	RabbitHost                       string `envconfig:"RABBIT_HOST" required:"true"`
@@ -49,6 +50,7 @@ type Configuration struct {
 var cfg *Configuration
 var TestConfig = &Configuration{
 	PublishersPerProcessor:           1,
+	RestartTimeout:                  5,
 	RabbitConnectionString:           "amqp://guest:guest@localhost:7672/",
 	ReceiptRoutingKey:                "goTestReceiptQueue",
 	UndeliveredRoutingKey:            "goTestUndeliveredQueue",

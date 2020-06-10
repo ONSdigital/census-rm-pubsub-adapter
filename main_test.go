@@ -116,7 +116,7 @@ func testMessageProcessing(messageToSend string, expectedRabbitMessage string, t
 	return func(t *testing.T) {
 		timeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		if _, err := StartProcessors(timeout, cfg, make(chan error)); err != nil {
+		if _, err := StartProcessors(timeout, cfg, make(chan processor.Error)); err != nil {
 			assert.NoError(t, err)
 			return
 		}
@@ -173,7 +173,7 @@ func testMessageQuarantining(messageToSend string, testDescription string, t *te
 
 	cfg.QuarantineMessageUrl = srv.URL
 
-	if _, err := StartProcessors(timeout, cfg, make(chan error)); err != nil {
+	if _, err := StartProcessors(timeout, cfg, make(chan processor.Error)); err != nil {
 		assert.NoError(t, err)
 		return
 	}
@@ -213,7 +213,7 @@ func testMessageQuarantining(messageToSend string, testDescription string, t *te
 func TestStartProcessors(t *testing.T) {
 	timeout, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	processors, err := StartProcessors(timeout, cfg, make(chan error))
+	processors, err := StartProcessors(timeout, cfg, make(chan processor.Error))
 	if err != nil {
 		assert.NoError(t, err)
 		return
@@ -226,12 +226,17 @@ func TestRabbitReconnectOnChannelDeath(t *testing.T) {
 	timeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	errChan := make(chan processor.Error)
+
 	// Initialise up the processors normally
-	processors, err := StartProcessors(timeout, cfg, make(chan error))
+	processors, err := StartProcessors(timeout, cfg, errChan)
 	if err != nil {
 		assert.NoError(t, err)
 		return
 	}
+
+	// Start the run loop
+	go RunLoop(timeout, cfg, nil, errChan)
 
 	// Take the first testProcessor
 	testProcessor := processors[0]
@@ -249,6 +254,8 @@ func TestRabbitReconnectOnChannelDeath(t *testing.T) {
 			}
 		}
 	}
+
+	// Subscribe another test channel to the close notifications
 	channelErrChan := make(chan *amqp.Error)
 	channel.NotifyClose(channelErrChan)
 
@@ -270,7 +277,8 @@ func TestRabbitReconnectOnChannelDeath(t *testing.T) {
 	// Wait for the unpublishable message to kill the channel with a timeout
 	select {
 	case <-timeout.Done():
-		t.Error("Timed out waiting for induced rabbit channel closure")
+		assert.Fail(t, "Timed out waiting for induced rabbit channel closure")
+		return
 	case <-channelErrChan:
 	}
 
@@ -295,12 +303,18 @@ func TestRabbitReconnectOnBadConnection(t *testing.T) {
 	brokenCfg := *cfg
 	brokenCfg.RabbitConnectionString = "bad-connection-string"
 
+	errChan := make(chan processor.Error)
+
 	// Initialise up the processors normally
-	processors, err := StartProcessors(timeout, &brokenCfg, make(chan error))
+	processors, err := StartProcessors(timeout, &brokenCfg, errChan)
 	if err != nil {
 		assert.NoError(t, err)
 		return
 	}
+
+	// Start the run loop
+	go RunLoop(timeout, cfg, nil, errChan)
+
 	// Take the first processor
 	testProcessor := processors[0]
 
@@ -320,6 +334,41 @@ func TestRabbitReconnectOnBadConnection(t *testing.T) {
 		return
 	case <-success:
 		return
+	}
+}
+
+func TestUnsuccessfulRestartsTimeOut(t *testing.T) {
+	timeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Induce a connection failure by using the wrong connection string
+	brokenCfg := *cfg
+	brokenCfg.RabbitConnectionString = "bad-connection-string"
+
+	// Turn down the restart timeout to 1 second for the test
+	brokenCfg.RestartTimeout = 1
+
+	errChan := make(chan processor.Error)
+
+	// Initialise up the processors normally
+	_, err := StartProcessors(timeout, &brokenCfg, errChan)
+	if err != nil {
+		assert.NoError(t, err)
+		return
+	}
+
+	// Start the run loop in a goroutine, send success when it exits
+	success := make(chan bool)
+	go func() {
+		RunLoop(timeout, &brokenCfg, nil, errChan)
+		success <- true
+	}()
+
+	select {
+	case <-success:
+		return
+	case <-timeout.Done():
+		assert.Fail(t, "Test timed out before the run loop exited on the timeout")
 	}
 }
 

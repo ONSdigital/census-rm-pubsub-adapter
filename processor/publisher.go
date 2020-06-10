@@ -54,7 +54,7 @@ func (p *Processor) initRabbitChannel(aggregateRabbitErrs chan *amqp.Error) (Rab
 	return channel, nil
 }
 
-func (p *Processor) handleRabbitChannelErrors(rabbitChannelErrs, aggregateRabbitErrs chan *amqp.Error) {
+func (p *Processor) handleRabbitChannelErrors(rabbitChannelErrs <-chan *amqp.Error, aggregateRabbitErrs chan<- *amqp.Error) {
 	select {
 	case rabbitErr := <-rabbitChannelErrs:
 		if rabbitErr != nil {
@@ -72,11 +72,11 @@ func (p *Processor) handleRabbitChannelErrors(rabbitChannelErrs, aggregateRabbit
 	}
 }
 
-func (p *Processor) aggregateRabbitErrors(rabbitErrChan chan *amqp.Error) {
+func (p *Processor) aggregateRabbitErrors(rabbitErrChan <-chan *amqp.Error) {
 	select {
 	case err := <-rabbitErrChan:
 		p.ErrChan <- Error{
-			Err:       err,
+			Err:       errors.Wrap(err, "rabbit connection or channel error"),
 			Processor: p,
 		}
 	case <-p.Context.Done():
