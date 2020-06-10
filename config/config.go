@@ -51,6 +51,7 @@ var cfg *Configuration
 var TestConfig = &Configuration{
 	PublishersPerProcessor:           1,
 	RestartTimeout:                  5,
+	ReadinessFilePath:               "/tmp/pubsub-adapter-ready",
 	RabbitConnectionString:           "amqp://guest:guest@localhost:7672/",
 	ReceiptRoutingKey:                "goTestReceiptQueue",
 	UndeliveredRoutingKey:            "goTestUndeliveredQueue",

@@ -2,6 +2,7 @@ package readiness
 
 import (
 	"context"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
@@ -29,11 +30,14 @@ func TestReady(t *testing.T) {
 
 func testReadinessFiles(t *testing.T) {
 	// Given
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
+	timeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	ctx, readinessCancel := context.WithCancel(timeout)
+	readiness := New(ctx, readinessFilePath)
 
 	// When
-	err := Ready(ctx, readinessFilePath)
+	err := readiness.Ready()
 	if err != nil {
 		assert.NoError(t, err)
 		return
@@ -46,18 +50,19 @@ func testReadinessFiles(t *testing.T) {
 		return
 	}
 
-	// Set a timeout for if the readiness file is not deleted
-	timeoutCtx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	// Check the readiness object is ready
+	assert.True(t, readiness.IsReady)
+
 
 	// Trigger the cancel which should result in the file being removed
-	cancel()
+	readinessCancel()
 
 	for {
 		// Check if readiness file has been removed
 		if _, err = os.Stat(readinessFilePath); err != nil {
 			// Succeed if the file does not now exist
 			if os.IsNotExist(err) {
-				return
+				break
 			}
 			// Error the test on any other error
 			assert.NoError(t, err)
@@ -66,13 +71,16 @@ func testReadinessFiles(t *testing.T) {
 
 		// Fail the test if it times out before the file is removed
 		select {
-		case <-timeoutCtx.Done():
+		case <-timeout.Done():
 			assert.Fail(t, "Test timed out waiting for file cleanup")
 			return
 		default:
 		}
 
 	}
+	// Check the readiness object is no longer ready
+	assert.False(t, readiness.IsReady)
+	fmt.Println(readiness)
 }
 
 func setupTestDirectory() error {

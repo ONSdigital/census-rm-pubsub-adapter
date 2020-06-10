@@ -12,6 +12,7 @@ import (
 	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/processor"
+	"github.com/ONSdigital/census-rm-pubsub-adapter/readiness"
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
@@ -235,8 +236,11 @@ func TestRabbitReconnectOnChannelDeath(t *testing.T) {
 		return
 	}
 
+	ready := readiness.New(timeout, cfg.ReadinessFilePath)
+	assert.NoError(t, ready.Ready())
+
 	// Start the run loop
-	go RunLoop(timeout, cfg, nil, errChan)
+	go RunLoop(timeout, cfg, nil, errChan, ready)
 
 	// Take the first testProcessor
 	testProcessor := processors[0]
@@ -312,8 +316,11 @@ func TestRabbitReconnectOnBadConnection(t *testing.T) {
 		return
 	}
 
+	ready := readiness.New(timeout, cfg.ReadinessFilePath)
+	assert.NoError(t, ready.Ready())
+
 	// Start the run loop
-	go RunLoop(timeout, cfg, nil, errChan)
+	go RunLoop(timeout, cfg, nil, errChan, ready)
 
 	// Take the first processor
 	testProcessor := processors[0]
@@ -357,10 +364,13 @@ func TestUnsuccessfulRestartsTimeOut(t *testing.T) {
 		return
 	}
 
+	ready := readiness.New(timeout, cfg.ReadinessFilePath)
+	assert.NoError(t, ready.Ready())
+
 	// Start the run loop in a goroutine, send success when it exits
 	success := make(chan bool)
 	go func() {
-		RunLoop(timeout, &brokenCfg, nil, errChan)
+		RunLoop(timeout, &brokenCfg, nil, errChan, ready)
 		success <- true
 	}()
 

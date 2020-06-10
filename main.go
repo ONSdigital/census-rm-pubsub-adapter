@@ -50,20 +50,20 @@ func main() {
 		logger.Logger.Info("Shutting down due to start up error")
 		return
 	}
-	// Indicate readiness
-	err = readiness.Ready(ctx, appConfig.ReadinessFilePath)
-	if err != nil {
-		logger.Logger.Errorw("Error indicating readiness", "error", err)
+
+	// Indicate ready
+	ready := readiness.New(ctx, appConfig.ReadinessFilePath)
+	if err := ready.Ready(); err != nil {
+		logger.Logger.Errorw("Error indicating ready", "error", err)
 		return
 	}
 
 	// Block until we receive OS shutdown signal or error
-	RunLoop(ctx, appConfig, signals, errChan)
+	RunLoop(ctx, appConfig, signals, errChan, ready)
 }
 
-func RunLoop(ctx context.Context, cfg *config.Configuration, signals chan os.Signal, errChan chan processor.Error) {
+func RunLoop(ctx context.Context, cfg *config.Configuration, signals chan os.Signal, errChan chan processor.Error, readiness *readiness.Readiness) {
 	restartTimeout := context.Background()
-	allRunning := true
 	for {
 		select {
 		case sig := <-signals:
@@ -75,31 +75,26 @@ func RunLoop(ctx context.Context, cfg *config.Configuration, signals chan os.Sig
 		case processorErr := <-errChan:
 			logger.Logger.Errorw("Processor error received", "error", processorErr.Err, "processor", processorErr.Name)
 
-			// If the app was running, start a timeout
-			if allRunning {
+			// If the app was running, show unready and start the restart timeout
+			// TODO choose between showing unready and letting K8s deal with the timeout and timing out in code here
+			if readiness.IsReady {
 				restartTimeout, _ = context.WithTimeout(context.Background(), time.Duration(cfg.RestartTimeout)*time.Second)
-				allRunning = false
+				_ = readiness.Unready()
 			}
-
-			//if err := readiness.Unready(cfg.ReadinessFilePath); err != nil {
-			//	logger.Logger.Errorw("Error showing not ready", "error", err)
-			//}
 
 			processorErr.Restart(ctx)
 
 			if err := waitForStartup(ctx, errChan); err != nil {
 				go processorErr.QueueError(err)
 			} else {
-				allRunning = true
 				restartTimeout = context.Background()
+				if err := readiness.Ready(); err != nil {
+					logger.Logger.Errorw("Error showing ready on restart", "error", err)
+				}
 			}
 
 			// Limit the rate of restarts
 			time.Sleep(1 * time.Second)
-
-			//if err := readiness.Ready(ctx, cfg.ReadinessFilePath); err != nil {
-			//	logger.Logger.Errorw("Error showing ready", "error", err)
-			//}
 		}
 	}
 }
