@@ -13,7 +13,7 @@ func TestConvertEqFulfilmentToRmMessage(t *testing.T) {
 		EqFulfilmentEvent: &models.RmEvent{
 			Type:          "FULFILMENT_CONFIRMED",
 			Source:        "RECEIPT_SERVICE",
-			Channel:       "QM",
+			Channel:       "EQ",
 			DateTime:      &timeCreated,
 			TransactionID: "abc123xxx",
 		},
@@ -21,7 +21,11 @@ func TestConvertEqFulfilmentToRmMessage(t *testing.T) {
 			FulfilmentRequest: &models.FulfilmentRequest{
 				FulfilmentCode: "ABC_XYZ_123",
 				CaseID:         "test",
-			}},
+				Contact: &models.Contact{
+					TelNo: "123",
+				},
+			},
+		},
 	}
 
 	expectedRabbitMessage := models.RmMessage{

@@ -78,13 +78,35 @@ func TestMessageProcessing(t *testing.T) {
 			"fulfilmentRequest" : {
 				"fulfilmentCode": "UACIT1",
 				"caseId" : "bbd55984-0dbf-4499-bfa7-0aa4228700e9",
+				"individualCaseId" : "8e8ebf71-d9c6-4efa-a693-ae24e7116e98",
 				"contact": {
 					"telNo":"+447890000000"
 				}
 			}
 		}
 	}`,
-		`{"event":{"type":"FULFILMENT_REQUESTED","source":"QUESTIONNAIRE_RUNNER","channel":"EQ","dateTime":"2011-08-12T20:17:46.384Z","transactionId":"c45de4dc-3c3b-11e9-b210-d663bd873d93"},"payload":{"fulfilmentRequest":{"fulfilmentCode":"UACIT1","caseId":"bbd55984-0dbf-4499-bfa7-0aa4228700e9","contact":{"telNo":"+447890000000"}}}}`,
+		`{"event":{"type":"FULFILMENT_REQUESTED","source":"QUESTIONNAIRE_RUNNER","channel":"EQ","dateTime":"2011-08-12T20:17:46.384Z","transactionId":"c45de4dc-3c3b-11e9-b210-d663bd873d93"},"payload":{"fulfilmentRequest":{"fulfilmentCode":"UACIT1","caseId":"bbd55984-0dbf-4499-bfa7-0aa4228700e9","individualCaseId":"8e8ebf71-d9c6-4efa-a693-ae24e7116e98","contact":{"telNo":"+447890000000"}}}}`,
+		cfg.EqFulfilmentTopic, cfg.EqFulfilmentProject, cfg.FulfilmentRequestRoutingKey))
+
+	t.Run("Test EQ fulfilment request empty contact", testMessageProcessing(
+		`{
+		"event" : {
+			"type" : "FULFILMENT_REQUESTED",
+			"source" : "QUESTIONNAIRE_RUNNER",
+			"channel" : "EQ",
+			"dateTime" : "2011-08-12T20:17:46.384Z",
+			"transactionId" : "c45de4dc-3c3b-11e9-b210-d663bd873d93"
+		},
+		"payload" : {
+			"fulfilmentRequest" : {
+				"fulfilmentCode": "P_UAC_UACIP1",
+				"caseId" : "bbd55984-0dbf-4499-bfa7-0aa4228700e9",
+				"individualCaseId" : "8e8ebf71-d9c6-4efa-a693-ae24e7116e98",
+				"contact": {}
+			}
+		}
+	}`,
+		`{"event":{"type":"FULFILMENT_REQUESTED","source":"QUESTIONNAIRE_RUNNER","channel":"EQ","dateTime":"2011-08-12T20:17:46.384Z","transactionId":"c45de4dc-3c3b-11e9-b210-d663bd873d93"},"payload":{"fulfilmentRequest":{"fulfilmentCode":"P_UAC_UACIP1","caseId":"bbd55984-0dbf-4499-bfa7-0aa4228700e9","individualCaseId":"8e8ebf71-d9c6-4efa-a693-ae24e7116e98","contact":{}}}}`,
 		cfg.EqFulfilmentTopic, cfg.EqFulfilmentProject, cfg.FulfilmentRequestRoutingKey))
 
 }

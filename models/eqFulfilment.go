@@ -15,12 +15,14 @@ type FulfilmentRequest struct {
 	FulfilmentCode   string   `json:"fulfilmentCode" validate:"required"`
 	CaseID           string   `json:"caseId" validate:"required"`
 	IndividualCaseID string   `json:"individualCaseId"`
-	Contact          *Contact `json:"contact,omitempty"`
+	Contact          *Contact `json:"contact" validate:"required"`
 }
 
 type Contact struct {
-	// TODO title, forename, surname?
-	TelNo string `json:"telNo"`
+	TelNo    string `json:"telNo,omitempty"`
+	Title    string `json:"title,omitempty"`
+	Forename string `json:"forename,omitempty"`
+	Surname  string `json:"surname,omitempty"`
 }
 
 func (e EqFulfilment) GetTransactionId() string {

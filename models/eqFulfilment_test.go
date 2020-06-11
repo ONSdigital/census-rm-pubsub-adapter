@@ -40,7 +40,12 @@ func TestEqFulfilment_Validate(t *testing.T) {
 		"payload" : {
 			"fulfilmentRequest" : {
 			"fulfilmentCode": "P_UAC_UACIP1",
-			"caseId" : "bbd55984-0dbf-4499-bfa7-0aa4228700e9"
+			"caseId" : "bbd55984-0dbf-4499-bfa7-0aa4228700e9",
+			"contact" : {
+				"title" : "Mr",
+				"forename" : "Testy",
+				"surname" : "McTestface"
+				}
 			}
 		}
 	}`, true))
