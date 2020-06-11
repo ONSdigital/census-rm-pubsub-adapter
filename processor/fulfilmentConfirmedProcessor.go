@@ -10,7 +10,7 @@ import (
 )
 
 func NewFulfilmentConfirmedProcessor(ctx context.Context, appConfig *config.Configuration, errChan chan error) (*Processor, error) {
-	return NewProcessor(ctx, appConfig, appConfig.FulfilmentConfirmedProject, appConfig.FulfilmentConfirmedSubscription, appConfig.FulfilmentRoutingKey, convertFulfilmentConfirmedToRmMessage, unmarshalFulfilmentConfirmed, errChan)
+	return NewProcessor(ctx, appConfig, appConfig.FulfilmentConfirmedProject, appConfig.FulfilmentConfirmedSubscription, appConfig.FulfilmentConfirmationRoutingKey, convertFulfilmentConfirmedToRmMessage, unmarshalFulfilmentConfirmed, errChan)
 }
 
 func unmarshalFulfilmentConfirmed(data []byte) (models.InboundMessage, error) {

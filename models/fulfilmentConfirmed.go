@@ -15,20 +15,20 @@ type FulfilmentConfirmed struct {
 	CaseRef         string       `json:"caseRef"`
 }
 
-func (o FulfilmentConfirmed) GetTransactionId() string {
-	return o.TransactionId
+func (f FulfilmentConfirmed) GetTransactionId() string {
+	return f.TransactionId
 }
 
-func (o FulfilmentConfirmed) Validate() error {
-	err := validate.Validate.Struct(o)
+func (f FulfilmentConfirmed) Validate() error {
+	err := validate.Validate.Struct(f)
 
 	if err == nil {
-		if o.Channel == "QM" && len(o.QuestionnaireId) == 0 {
-			err = errors.New(fmt.Sprintf("Missing questionnaire ID in QM message: %T, tx_id: %q", o, o.GetTransactionId()))
-		} else if o.Channel == "PPO" && len(o.CaseRef) == 0 {
-			err = errors.New(fmt.Sprintf("Missing case ref in PPO message: %T, tx_id: %q", o, o.GetTransactionId()))
-		} else if o.Channel != "QM" && o.Channel != "PPO" {
-			err = errors.New(fmt.Sprintf("Unexpected channel: %T, tx_id: %q", o, o.GetTransactionId()))
+		if f.Channel == "QM" && len(f.QuestionnaireId) == 0 {
+			err = errors.New(fmt.Sprintf("Missing questionnaire ID in QM message: %T, tx_id: %q", f, f.GetTransactionId()))
+		} else if f.Channel == "PPO" && len(f.CaseRef) == 0 {
+			err = errors.New(fmt.Sprintf("Missing case ref in PPO message: %T, tx_id: %q", f, f.GetTransactionId()))
+		} else if f.Channel != "QM" && f.Channel != "PPO" {
+			err = errors.New(fmt.Sprintf("Unexpected channel: %T, tx_id: %q", f, f.GetTransactionId()))
 		}
 	}
 

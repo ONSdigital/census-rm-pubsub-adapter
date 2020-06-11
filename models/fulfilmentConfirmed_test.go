@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestFulfilmentConfirmed_Validate_Validate(t *testing.T) {
+func TestFulfilmentConfirmed_Validate(t *testing.T) {
 
 	t.Run("Validate good QM FulfilmentConfirmed",
 		testFulfilmentConfirmedValidate(`{"dateTime":"2019-08-03T14:30:01","questionnaireId":"1100000000112","productCode":"P_OR_H1","channel":"QM","type":"FULFILMENT_CONFIRMED","transactionId":"92971ad5-c534-48af-a8b3-92484b14ceef"}`,

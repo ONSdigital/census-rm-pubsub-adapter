@@ -13,16 +13,17 @@ type Configuration struct {
 	PublishersPerProcessor int    `envconfig:"PUBLISHERS_PER_PROCESSOR" default:"20"`
 
 	// Rabbit
-	RabbitHost             string `envconfig:"RABBIT_HOST" required:"true"`
-	RabbitPort             string `envconfig:"RABBIT_PORT" required:"true"`
-	RabbitUsername         string `envconfig:"RABBIT_USERNAME" required:"true"`
-	RabbitPassword         string `envconfig:"RABBIT_PASSWORD"  required:"true"  json:"-"`
-	RabbitVHost            string `envconfig:"RABBIT_VHOST"  default:"/"`
-	RabbitConnectionString string `json:"-"`
-	EventsExchange         string `envconfig:"RABBIT_EXCHANGE"  default:"events"`
-	ReceiptRoutingKey      string `envconfig:"RECEIPT_ROUTING_KEY"  default:"event.response.receipt"`
-	UndeliveredRoutingKey  string `envconfig:"UNDELIVERED_ROUTING_KEY"  default:"event.fulfilment.undelivered"`
-	FulfilmentRoutingKey   string `envconfig:"FULFILMENT_ROUTING_KEY"  default:"event.fulfilment.confirmation"`
+	RabbitHost                       string `envconfig:"RABBIT_HOST" required:"true"`
+	RabbitPort                       string `envconfig:"RABBIT_PORT" required:"true"`
+	RabbitUsername                   string `envconfig:"RABBIT_USERNAME" required:"true"`
+	RabbitPassword                   string `envconfig:"RABBIT_PASSWORD"  required:"true"  json:"-"`
+	RabbitVHost                      string `envconfig:"RABBIT_VHOST"  default:"/"`
+	RabbitConnectionString           string `json:"-"`
+	EventsExchange                   string `envconfig:"RABBIT_EXCHANGE"  default:"events"`
+	ReceiptRoutingKey                string `envconfig:"RECEIPT_ROUTING_KEY"  default:"event.response.receipt"`
+	UndeliveredRoutingKey            string `envconfig:"UNDELIVERED_ROUTING_KEY"  default:"event.fulfilment.undelivered"`
+	FulfilmentConfirmationRoutingKey string `envconfig:"FULFILMENT_CONFIRMATION_ROUTING_KEY"  default:"event.fulfilment.confirmation"`
+	FulfilmentRequestRoutingKey      string `envconfig:"FULFILMENT_REQUEST_ROUTING_KEY"  default:"event.fulfilment.request"`
 
 	// PubSub
 	EqReceiptProject                string `envconfig:"EQ_RECEIPT_PROJECT" required:"true"`
@@ -38,32 +39,39 @@ type Configuration struct {
 	QmUndeliveredSubscription       string `envconfig:"QM_UNDELIVERED_SUBSCRIPTION" default:"rm-qm-undelivered-subscription"`
 	QmUndeliveredTopic              string `envconfig:"QM_UNDELIVERED_TOPIC" default:"qm-undelivered-topic"`
 	FulfilmentConfirmedProject      string `envconfig:"FULFILMENT_CONFIRMED_PROJECT" required:"true"`
-	FulfilmentConfirmedSubscription string `envconfig:"FULFILMENT_CONFIRMED_SUBSCRIPTION" default:"fulfilment-subscription"`
-	FulfilmentConfirmedTopic        string `envconfig:"FULFILMENT_CONFIRMED_TOPIC" default:"fulfilment-topic"`
+	FulfilmentConfirmedSubscription string `envconfig:"FULFILMENT_CONFIRMED_SUBSCRIPTION" default:"fulfilment-confirmed-subscription"`
+	FulfilmentConfirmedTopic        string `envconfig:"FULFILMENT_CONFIRMED_TOPIC" default:"fulfilment-confirmed-topic"`
+	EqFulfilmentProject             string `envconfig:"FULFILMENT_CONFIRMED_PROJECT" required:"true"`
+	EqFulfilmentSubscription        string `envconfig:"FULFILMENT_CONFIRMED_SUBSCRIPTION" default:"eq-fulfilment-subscription"`
+	EqFulfilmentTopic               string `envconfig:"FULFILMENT_CONFIRMED_TOPIC" default:"eq-fulfilment-topic"`
 }
 
 var cfg *Configuration
 var TestConfig = &Configuration{
-	PublishersPerProcessor:          1,
-	RabbitConnectionString:          "amqp://guest:guest@localhost:7672/",
-	ReceiptRoutingKey:               "goTestReceiptQueue",
-	UndeliveredRoutingKey:           "goTestUndeliveredQueue",
-	FulfilmentRoutingKey:            "goTestFulfilmentConfirmedQueue",
-	EqReceiptProject:                "project",
-	EqReceiptSubscription:           "rm-receipt-subscription",
-	EqReceiptTopic:                  "eq-submission-topic",
-	OfflineReceiptProject:           "offline-project",
-	OfflineReceiptSubscription:      "rm-offline-receipt-subscription",
-	OfflineReceiptTopic:             "offline-receipt-topic",
-	PpoUndeliveredProject:           "ppo-undelivered-project",
-	PpoUndeliveredTopic:             "ppo-undelivered-mail-topic",
-	PpoUndeliveredSubscription:      "rm-ppo-undelivered-subscription",
-	QmUndeliveredProject:            "qm-undelivered-project",
-	QmUndeliveredTopic:              "qm-undelivered-mail-topic",
-	QmUndeliveredSubscription:       "rm-qm-undelivered-subscription",
-	FulfilmentConfirmedProject:      "fulfilment-confirmed-project",
-	FulfilmentConfirmedSubscription: "fulfilment-subscription",
-	FulfilmentConfirmedTopic:        "fulfilment-topic",
+	PublishersPerProcessor:           1,
+	RabbitConnectionString:           "amqp://guest:guest@localhost:7672/",
+	ReceiptRoutingKey:                "goTestReceiptQueue",
+	UndeliveredRoutingKey:            "goTestUndeliveredQueue",
+	FulfilmentRequestRoutingKey:      "goTestFulfilmentRequestQueue",
+	FulfilmentConfirmationRoutingKey: "goTestFulfilmentConfirmedQueue",
+	EqReceiptProject:                 "project",
+	EqReceiptSubscription:            "rm-receipt-subscription",
+	EqReceiptTopic:                   "eq-submission-topic",
+	OfflineReceiptProject:            "offline-project",
+	OfflineReceiptSubscription:       "rm-offline-receipt-subscription",
+	OfflineReceiptTopic:              "offline-receipt-topic",
+	PpoUndeliveredProject:            "ppo-undelivered-project",
+	PpoUndeliveredTopic:              "ppo-undelivered-mail-topic",
+	PpoUndeliveredSubscription:       "rm-ppo-undelivered-subscription",
+	QmUndeliveredProject:             "qm-undelivered-project",
+	QmUndeliveredTopic:               "qm-undelivered-mail-topic",
+	QmUndeliveredSubscription:        "rm-qm-undelivered-subscription",
+	FulfilmentConfirmedProject:       "fulfilment-confirmed-project",
+	FulfilmentConfirmedSubscription:  "fulfilment-confirmed-subscription",
+	FulfilmentConfirmedTopic:         "fulfilment-confirmed-topic",
+	EqFulfilmentProject:              "eq-fulfilment-project",
+	EqFulfilmentSubscription:         "eq-fulfilment-subscription",
+	EqFulfilmentTopic:                "eq-fulfilment-topic",
 }
 
 func GetConfig() (*Configuration, error) {
