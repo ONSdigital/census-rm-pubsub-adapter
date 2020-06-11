@@ -41,9 +41,9 @@ type Configuration struct {
 	FulfilmentConfirmedProject      string `envconfig:"FULFILMENT_CONFIRMED_PROJECT" required:"true"`
 	FulfilmentConfirmedSubscription string `envconfig:"FULFILMENT_CONFIRMED_SUBSCRIPTION" default:"fulfilment-confirmed-subscription"`
 	FulfilmentConfirmedTopic        string `envconfig:"FULFILMENT_CONFIRMED_TOPIC" default:"fulfilment-confirmed-topic"`
-	EqFulfilmentProject             string `envconfig:"FULFILMENT_CONFIRMED_PROJECT" required:"true"`
-	EqFulfilmentSubscription        string `envconfig:"FULFILMENT_CONFIRMED_SUBSCRIPTION" default:"eq-fulfilment-subscription"`
-	EqFulfilmentTopic               string `envconfig:"FULFILMENT_CONFIRMED_TOPIC" default:"eq-fulfilment-topic"`
+	EqFulfilmentProject             string `envconfig:"EQ_FULFILMENT_PROJECT" required:"true"`
+	EqFulfilmentSubscription        string `envconfig:"EQ_FULFILMENT_SUBSCRIPTION" default:"eq-fulfilment-subscription"`
+	EqFulfilmentTopic               string `envconfig:"EQ_FULFILMENT_TOPIC" default:"eq-fulfilment-topic"`
 }
 
 var cfg *Configuration
