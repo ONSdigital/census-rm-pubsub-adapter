@@ -5,4 +5,3 @@ type RmResponse struct {
 	QuestionnaireID string `json:"questionnaireId"`
 	Unreceipt       bool   `json:"unreceipt"`
 }
-
