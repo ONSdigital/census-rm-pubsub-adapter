@@ -20,6 +20,7 @@ func TestEqFulfilment_Validate(t *testing.T) {
 			"fulfilmentRequest" : {
 				"fulfilmentCode": "UACIT1",
 				"caseId" : "bbd55984-0dbf-4499-bfa7-0aa4228700e9",
+				"individualCaseID": "c8e11403-9392-48e3-bfd5-5e8350ca1c4e",
 				"contact": {
 					"telNo":"+447890000000"
 				}

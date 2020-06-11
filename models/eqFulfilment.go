@@ -12,9 +12,10 @@ type EqFulfilmentPayload struct {
 }
 
 type FulfilmentRequest struct {
-	FulfilmentCode string   `json:"fulfilmentCode" validate:"required"`
-	CaseID         string   `json:"caseId" validate:"required"`
-	Contact        *Contact `json:"contact,omitempty"`
+	FulfilmentCode   string   `json:"fulfilmentCode" validate:"required"`
+	CaseID           string   `json:"caseId" validate:"required"`
+	IndividualCaseID string   `json:"individualCaseId"`
+	Contact          *Contact `json:"contact,omitempty"`
 }
 
 type Contact struct {
