@@ -63,38 +63,26 @@ func main() {
 }
 
 func RunLoop(ctx context.Context, cfg *config.Configuration, signals chan os.Signal, errChan chan processor.Error, readiness *readiness.Readiness) {
-	restartTimeout := context.Background()
 	for {
 		select {
 		case sig := <-signals:
 			logger.Logger.Infow("OS Signal Received", "signal", sig.String())
 			return
-		case <-restartTimeout.Done():
-			logger.Logger.Infow("Could not successfully restart, shutting down", "restartTimeout", cfg.RestartTimeout)
-			return
 		case processorErr := <-errChan:
 			logger.Logger.Errorw("Processor error received", "error", processorErr.Err, "processor", processorErr.Name)
 
-			// If the app was running, show unready and start the restart timeout
-			// TODO choose between showing unready and letting K8s deal with the timeout and timing out in code here
-			if readiness.IsReady {
-				restartTimeout, _ = context.WithTimeout(context.Background(), time.Duration(cfg.RestartTimeout)*time.Second)
-				_ = readiness.Unready()
-			}
-
 			processorErr.Restart(ctx)
 
+			// Wait for successful start up
 			if err := waitForStartup(ctx, errChan); err != nil {
+				// Requeue the error if restart was no successful so that it is retried
 				go processorErr.QueueError(err)
 			} else {
-				restartTimeout = context.Background()
-				if err := readiness.Ready(); err != nil {
-					logger.Logger.Errorw("Error showing ready on restart", "error", err)
-				}
+				logger.Logger.Infow("Successfully restarted processor", "processor", processorErr.Name)
 			}
 
 			// Limit the rate of restarts
-			time.Sleep(1 * time.Second)
+			time.Sleep(time.Duration(cfg.ProcessorRestartWaitSeconds) * time.Second)
 		}
 	}
 }

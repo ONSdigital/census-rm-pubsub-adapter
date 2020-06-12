@@ -344,44 +344,6 @@ func TestRabbitReconnectOnBadConnection(t *testing.T) {
 	}
 }
 
-func TestUnsuccessfulRestartsTimeOut(t *testing.T) {
-	timeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	// Induce a connection failure by using the wrong connection string
-	brokenCfg := *cfg
-	brokenCfg.RabbitConnectionString = "bad-connection-string"
-
-	// Turn down the restart timeout to 1 second for the test
-	brokenCfg.RestartTimeout = 1
-
-	errChan := make(chan processor.Error)
-
-	// Initialise up the processors normally
-	_, err := StartProcessors(timeout, &brokenCfg, errChan)
-	if err != nil {
-		assert.NoError(t, err)
-		return
-	}
-
-	ready := readiness.New(timeout, cfg.ReadinessFilePath)
-	assert.NoError(t, ready.Ready())
-
-	// Start the run loop in a goroutine, send success when it exits
-	success := make(chan bool)
-	go func() {
-		RunLoop(timeout, &brokenCfg, nil, errChan, ready)
-		success <- true
-	}()
-
-	select {
-	case <-success:
-		return
-	case <-timeout.Done():
-		assert.Fail(t, "Test timed out before the run loop exited on the timeout")
-	}
-}
-
 func publishMessageToPubSub(ctx context.Context, msg string, topic string, project string) (id string, err error) {
 	pubSubClient, err := pubsub.NewClient(ctx, project)
 	if err != nil {
