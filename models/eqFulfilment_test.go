@@ -87,27 +87,6 @@ func TestEqFulfilment_Validate(t *testing.T) {
 			}
 		}
 	}`, false))
-
-	t.Run("Invalid EQ fulfilment request wrong type", testEqFulfilmentValidate(
-		`{
-		"event" : {
-			"type" : "NOT_THE_CORRECT_TYPE",
-			"source" : "QUESTIONNAIRE_RUNNER",
-			"channel" : "EQ",
-			"dateTime" : "2011-08-12T20:17:46.384Z",
-			"transactionId" : "c45de4dc-3c3b-11e9-b210-d663bd873d93"
-		},
-		"payload" : {
-			"fulfilmentRequest" : {
-				"fulfilmentCode": "UACIT1",
-				"caseId" : "bbd55984-0dbf-4499-bfa7-0aa4228700e9",
-				"contact": {
-					"telNo":"+447890000000"
-				}
-			}
-		}
-	}`, true))
-
 }
 
 func testEqFulfilmentValidate(msgJson string, valid bool) func(*testing.T) {
