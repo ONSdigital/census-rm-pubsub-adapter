@@ -53,7 +53,6 @@ func testReadinessFiles(t *testing.T) {
 	// Check the readiness object is ready
 	assert.True(t, readiness.IsReady)
 
-
 	// Trigger the cancel which should result in the file being removed
 	readinessCancel()
 
