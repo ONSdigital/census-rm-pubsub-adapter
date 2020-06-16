@@ -11,8 +11,8 @@ func TestConvertEqFulfilmentToRmMessage(t *testing.T) {
 	timeCreated, _ := time.Parse("2006-07-08T03:04:05Z", "2008-08-24T00:00:00Z")
 	eqFulfilment := models.EqFulfilment{
 		EqFulfilmentEvent: &models.RmEvent{
-			Type:          "FULFILMENT_CONFIRMED",
-			Source:        "RECEIPT_SERVICE",
+			Type:          "FULFILMENT_REQUESTED",
+			Source:        "QUESTIONNAIRE_RUNNER",
 			Channel:       "EQ",
 			DateTime:      &timeCreated,
 			TransactionID: "abc123xxx",

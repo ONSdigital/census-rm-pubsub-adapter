@@ -65,6 +65,7 @@ func TestMessageProcessing(t *testing.T) {
 		`{"dateTime":"2019-08-03T14:30:01","caseRef":"12345678","productCode":"P_OR_H1","channel":"PPO","type":"FULFILMENT_CONFIRMED","transactionId":"92971ad5-c534-48af-a8b3-92484b14ceef"}`,
 		`{"event":{"type":"FULFILMENT_CONFIRMED","source":"RECEIPT_SERVICE","channel":"PPO","dateTime":"2019-08-03T14:30:01Z","transactionId":"92971ad5-c534-48af-a8b3-92484b14ceef"},"payload":{"fulfilmentInformation":{"caseRef":"12345678","fulfilmentCode":"P_OR_H1"}}}`,
 		cfg.FulfilmentConfirmedTopic, cfg.FulfilmentConfirmedProject, cfg.FulfilmentConfirmationRoutingKey))
+
 	t.Run("Test EQ fulfilment request", testMessageProcessing(
 		`{
 		"event" : {
@@ -216,7 +217,7 @@ func TestStartProcessors(t *testing.T) {
 		return
 	}
 
-	assert.Len(t, processors, 6, "StartProcessors should return 5 processors")
+	assert.Len(t, processors, 6, "StartProcessors should return 6 processors")
 }
 
 func TestRabbitReconnectOnChannelDeath(t *testing.T) {
