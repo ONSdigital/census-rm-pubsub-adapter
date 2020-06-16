@@ -59,12 +59,57 @@ func TestMessageProcessing(t *testing.T) {
 	t.Run("Test QM fulfilment confirmation", testMessageProcessing(
 		`{"dateTime":"2019-08-03T14:30:01","questionnaireId":"1100000000112","productCode":"P_OR_H1","channel":"QM","type":"FULFILMENT_CONFIRMED","transactionId":"92971ad5-c534-48af-a8b3-92484b14ceef"}`,
 		`{"event":{"type":"FULFILMENT_CONFIRMED","source":"RECEIPT_SERVICE","channel":"QM","dateTime":"2019-08-03T14:30:01Z","transactionId":"92971ad5-c534-48af-a8b3-92484b14ceef"},"payload":{"fulfilmentInformation":{"fulfilmentCode":"P_OR_H1","questionnaireId":"1100000000112"}}}`,
-		cfg.FulfilmentConfirmedTopic, cfg.FulfilmentConfirmedProject, cfg.FulfilmentRoutingKey))
+		cfg.FulfilmentConfirmedTopic, cfg.FulfilmentConfirmedProject, cfg.FulfilmentConfirmationRoutingKey))
 
 	t.Run("Test PPO fulfilment confirmation", testMessageProcessing(
 		`{"dateTime":"2019-08-03T14:30:01","caseRef":"12345678","productCode":"P_OR_H1","channel":"PPO","type":"FULFILMENT_CONFIRMED","transactionId":"92971ad5-c534-48af-a8b3-92484b14ceef"}`,
 		`{"event":{"type":"FULFILMENT_CONFIRMED","source":"RECEIPT_SERVICE","channel":"PPO","dateTime":"2019-08-03T14:30:01Z","transactionId":"92971ad5-c534-48af-a8b3-92484b14ceef"},"payload":{"fulfilmentInformation":{"caseRef":"12345678","fulfilmentCode":"P_OR_H1"}}}`,
-		cfg.FulfilmentConfirmedTopic, cfg.FulfilmentConfirmedProject, cfg.FulfilmentRoutingKey))
+		cfg.FulfilmentConfirmedTopic, cfg.FulfilmentConfirmedProject, cfg.FulfilmentConfirmationRoutingKey))
+
+	t.Run("Test EQ fulfilment request", testMessageProcessing(
+		`{
+		"event" : {
+			"type" : "FULFILMENT_REQUESTED",
+			"source" : "QUESTIONNAIRE_RUNNER",
+			"channel" : "EQ",
+			"dateTime" : "2011-08-12T20:17:46.384Z",
+			"transactionId" : "c45de4dc-3c3b-11e9-b210-d663bd873d93"
+		},
+		"payload" : {
+			"fulfilmentRequest" : {
+				"fulfilmentCode": "UACIT1",
+				"caseId" : "bbd55984-0dbf-4499-bfa7-0aa4228700e9",
+				"individualCaseId" : "8e8ebf71-d9c6-4efa-a693-ae24e7116e98",
+				"contact": {
+					"telNo":"+447890000000"
+				}
+			}
+		}
+	}`,
+		`{"event":{"type":"FULFILMENT_REQUESTED","source":"QUESTIONNAIRE_RUNNER","channel":"EQ","dateTime":"2011-08-12T20:17:46.384Z","transactionId":"c45de4dc-3c3b-11e9-b210-d663bd873d93"},"payload":{"fulfilmentRequest":{"fulfilmentCode":"UACIT1","caseId":"bbd55984-0dbf-4499-bfa7-0aa4228700e9","individualCaseId":"8e8ebf71-d9c6-4efa-a693-ae24e7116e98","contact":{"telNo":"+447890000000"}}}}`,
+		cfg.EqFulfilmentTopic, cfg.EqFulfilmentProject, cfg.FulfilmentRequestRoutingKey))
+
+	t.Run("Test EQ fulfilment request empty contact", testMessageProcessing(
+		`{
+		"event" : {
+			"type" : "FULFILMENT_REQUESTED",
+			"source" : "QUESTIONNAIRE_RUNNER",
+			"channel" : "EQ",
+			"dateTime" : "2011-08-12T20:17:46.384Z",
+			"transactionId" : "c45de4dc-3c3b-11e9-b210-d663bd873d93"
+		},
+		"payload" : {
+			"fulfilmentRequest" : {
+				"fulfilmentCode": "P_UAC_UACIP1",
+				"caseId" : "bbd55984-0dbf-4499-bfa7-0aa4228700e9",
+				"individualCaseId" : "8e8ebf71-d9c6-4efa-a693-ae24e7116e98",
+				"contact": {}
+			}
+		}
+	}`,
+		`{"event":{"type":"FULFILMENT_REQUESTED","source":"QUESTIONNAIRE_RUNNER","channel":"EQ","dateTime":"2011-08-12T20:17:46.384Z","transactionId":"c45de4dc-3c3b-11e9-b210-d663bd873d93"},"payload":{"fulfilmentRequest":{"fulfilmentCode":"P_UAC_UACIP1","caseId":"bbd55984-0dbf-4499-bfa7-0aa4228700e9","individualCaseId":"8e8ebf71-d9c6-4efa-a693-ae24e7116e98","contact":{}}}}`,
+		cfg.EqFulfilmentTopic, cfg.EqFulfilmentProject, cfg.FulfilmentRequestRoutingKey))
+
 }
 
 func testMessageProcessing(messageToSend string, expectedRabbitMessage string, topic string, project string, rabbitRoutingKey string) func(t *testing.T) {
@@ -172,7 +217,7 @@ func TestStartProcessors(t *testing.T) {
 		return
 	}
 
-	assert.Len(t, processors, 5, "StartProcessors should return 5 processors")
+	assert.Len(t, processors, 6, "StartProcessors should return 6 processors")
 }
 
 func TestRabbitReconnectOnChannelDeath(t *testing.T) {

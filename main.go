@@ -98,6 +98,12 @@ func StartProcessors(ctx context.Context, cfg *config.Configuration, errChan cha
 	}
 	processors = append(processors, fulfilmentConfirmedProcessor)
 
+	eqFulfilmentProcessor, err := processor.NewEqFulfilmentProcessor(ctx, cfg, errChan)
+	if err != nil {
+		return processors, errors.Wrap(err, "Error starting eq fulfilment processor")
+	}
+	processors = append(processors, eqFulfilmentProcessor)
+
 	return processors, nil
 }
 
