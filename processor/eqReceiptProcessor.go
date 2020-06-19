@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
-	"github.com/pkg/errors"
 )
 
 func NewEqReceiptProcessor(ctx context.Context, appConfig *config.Configuration, errChan chan error) (*Processor, error) {
@@ -28,7 +27,7 @@ func unmarshalEqReceipt(data []byte) (models.InboundMessage, error) {
 func convertEqReceiptToRmMessage(receipt models.InboundMessage) (*models.RmMessage, error) {
 	eqReceipt, ok := receipt.(models.EqReceipt)
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("Wrong message model given to convertEqReceiptToRmMessage: %T, only accepts EqReceipt, tx_id: %q", receipt, receipt.GetTransactionId()))
+		return nil, fmt.Errorf("wrong message model given to convertEqReceiptToRmMessage: %T, only accepts EqReceipt, tx_id: %q", receipt, receipt.GetTransactionId())
 	}
 
 	return &models.RmMessage{

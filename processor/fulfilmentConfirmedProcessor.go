@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
-	"github.com/pkg/errors"
 )
 
 func NewFulfilmentConfirmedProcessor(ctx context.Context, appConfig *config.Configuration, errChan chan error) (*Processor, error) {
@@ -27,7 +26,7 @@ func unmarshalFulfilmentConfirmed(data []byte) (models.InboundMessage, error) {
 func convertFulfilmentConfirmedToRmMessage(confirmation models.InboundMessage) (*models.RmMessage, error) {
 	fulfilmentConfirmed, ok := confirmation.(models.FulfilmentConfirmed)
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("Wrong message model given to convertFulfilmentConfirmedToRmMessage: %T, only accepts FulfilmentConfirmed, tx_id: %q", confirmation, confirmation.GetTransactionId()))
+		return nil, fmt.Errorf("wrong message model given to convertFulfilmentConfirmedToRmMessage: %T, only accepts FulfilmentConfirmed, tx_id: %q", confirmation, confirmation.GetTransactionId())
 	}
 
 	var payload models.FulfilmentInformation

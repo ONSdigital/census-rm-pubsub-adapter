@@ -13,7 +13,7 @@ wait_for_curl_success() {
         response=$(curl -X $http_verb --write-out %{http_code} --silent --output /dev/null $healthcheck_url)
 
         if [[ response -eq 200 ]] || [[ response -eq 409 ]]; then
-          break
+            break
         fi
 
         echo "[$service_name] not ready ([$response] was the response from curl)"

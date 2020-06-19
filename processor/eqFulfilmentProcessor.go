@@ -3,7 +3,6 @@ package processor
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
@@ -27,7 +26,7 @@ func unmarshalEqFulfilment(bytes []byte) (models.InboundMessage, error) {
 func convertEqFulfilment(fulfilmentRequest models.InboundMessage) (*models.RmMessage, error) {
 	eqFulfilment, ok := fulfilmentRequest.(models.EqFulfilment)
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("Wrong message model given to convertEqFulfilment: %T, only accepts EqFulfilment, tx_id: %q", fulfilmentRequest, fulfilmentRequest.GetTransactionId()))
+		return nil, fmt.Errorf("wrong message model given to convertEqFulfilment: %T, only accepts EqFulfilment, tx_id: %q", fulfilmentRequest, fulfilmentRequest.GetTransactionId())
 	}
 	return &models.RmMessage{
 		Event: *eqFulfilment.EqFulfilmentEvent,

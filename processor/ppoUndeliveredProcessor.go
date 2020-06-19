@@ -3,7 +3,6 @@ package processor
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
@@ -27,7 +26,7 @@ func unmarshalPpoUndelivered(data []byte) (models.InboundMessage, error) {
 func convertPpoUndeliveredToRmMessage(message models.InboundMessage) (*models.RmMessage, error) {
 	ppoUndelivered, ok := message.(models.PpoUndelivered)
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("Wrong message model given to convertPpoUndeliveredToRmMessage: %T, only accepts ppoUndelivered, tx_id: %q", message, message.GetTransactionId()))
+		return nil, fmt.Errorf("wrong message model given to convertPpoUndeliveredToRmMessage: %T, only accepts ppoUndelivered, tx_id: %q", message, message.GetTransactionId())
 	}
 
 	return &models.RmMessage{
