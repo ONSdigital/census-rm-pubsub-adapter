@@ -122,8 +122,10 @@ func testMessageProcessing(messageToSend string, expectedRabbitMessage string, t
 		}
 
 		rabbitConn, rabbitCh, err := connectToRabbitChannel()
-		defer rabbitCh.Close()
+		assert.NoError(t, err)
 		defer rabbitConn.Close()
+		defer rabbitCh.Close()
+
 		if _, err := rabbitCh.QueuePurge(rabbitRoutingKey, false); err != nil {
 			assert.NoError(t, err)
 			return

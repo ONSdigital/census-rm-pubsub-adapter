@@ -1,5 +1,6 @@
 # census-rm-pubsub-adapter
 [![Build Status](https://travis-ci.com/ONSdigital/census-rm-pubsub-adapter.svg?branch=master)](https://travis-ci.com/ONSdigital/census-rm-pubsub-adapter)
+[![Go Report Card](https://goreportcard.com/badge/github.com/ONSdigital/census-rm-pubsub-adapter)](https://goreportcard.com/report/github.com/ONSdigital/census-rm-pubsub-adapter)
 
 An adapter service to translate inbound PubSub messages into the standard format of RM JSON events and republish them on to our events exchange.
 
