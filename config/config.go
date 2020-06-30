@@ -50,8 +50,8 @@ type Configuration struct {
 var cfg *Configuration
 var TestConfig = &Configuration{
 	PublishersPerProcessor:           1,
-	ProcessorRestartWaitSeconds:     1,
-	ReadinessFilePath:               "/tmp/pubsub-adapter-ready",
+	ProcessorRestartWaitSeconds:      1,
+	ReadinessFilePath:                "/tmp/pubsub-adapter-ready",
 	RabbitConnectionString:           "amqp://guest:guest@localhost:7672/",
 	ReceiptRoutingKey:                "goTestReceiptQueue",
 	UndeliveredRoutingKey:            "goTestUndeliveredQueue",

@@ -19,7 +19,8 @@ func TestReady(t *testing.T) {
 		return
 	}
 
-	t.Run("Test readiness file is produced and removed", testReadinessFiles)
+	t.Run("Test readiness file is produced", testShowReadinessFile)
+	t.Run("Test readiness file is removed", testRemoveReadinessFile)
 
 	err = os.RemoveAll(testDir)
 	if err != nil {
@@ -28,13 +29,12 @@ func TestReady(t *testing.T) {
 
 }
 
-func testReadinessFiles(t *testing.T) {
+func testShowReadinessFile(t *testing.T) {
 	// Given
 	timeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	ctx, readinessCancel := context.WithCancel(timeout)
-	readiness := New(ctx, readinessFilePath)
+	readiness := New(timeout, readinessFilePath)
 
 	// When
 	err := readiness.Ready()
@@ -53,8 +53,27 @@ func testReadinessFiles(t *testing.T) {
 	// Check the readiness object is ready
 	assert.True(t, readiness.IsReady)
 
+}
+func testRemoveReadinessFile(t *testing.T) {
+
+	// Given
+	timeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	readiness := New(timeout, readinessFilePath)
+
+	// When
+	err := readiness.Ready()
+	if err != nil {
+		assert.NoError(t, err)
+		return
+	}
+
 	// Trigger the cancel which should result in the file being removed
+	removeCtx, readinessCancel := context.WithCancel(timeout)
 	readinessCancel()
+
+	readiness.removeReadyWhenDone(removeCtx)
 
 	for {
 		// Check if readiness file has been removed
