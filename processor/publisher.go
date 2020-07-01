@@ -29,7 +29,7 @@ func (p *Processor) initRabbitConnection() error {
 	return nil
 }
 
-func (p *Processor) initRabbitChannel(aggregateRabbitErrs chan *amqp.Error) (RabbitChannel, error) {
+func (p *Processor) initRabbitChannel(firstRabbitErr chan *amqp.Error) (RabbitChannel, error) {
 	var err error
 	var channel *amqp.Channel
 
@@ -47,21 +47,23 @@ func (p *Processor) initRabbitChannel(aggregateRabbitErrs chan *amqp.Error) (Rab
 	// Set up handler to attempt to reopen channel on channel close
 	// Listen for errors on the rabbit channel to handle both channel specific and connection wide exceptions
 	rabbitChannelErrs := make(chan *amqp.Error)
-	go p.handleRabbitChannelErrors(rabbitChannelErrs, aggregateRabbitErrs)
+	go p.handleRabbitChannelErrors(rabbitChannelErrs, firstRabbitErr)
 	channel.NotifyClose(rabbitChannelErrs)
 	p.RabbitChannels = append(p.RabbitChannels, channel)
 
 	return channel, nil
 }
 
-func (p *Processor) handleRabbitChannelErrors(rabbitChannelErrs <-chan *amqp.Error, aggregateRabbitErrs chan<- *amqp.Error) {
+func (p *Processor) handleRabbitChannelErrors(rabbitChannelErrs <-chan *amqp.Error, firstRabbitErr chan<- *amqp.Error) {
 	select {
 	case rabbitErr := <-rabbitChannelErrs:
 		if rabbitErr != nil {
 			p.Logger.Errorw("received rabbit channel error", "error", rabbitErr)
-			// Non blocking write to aggregate errors channel, we only case about the first because the processor is restarted anyway
 			select {
-			case aggregateRabbitErrs <- rabbitErr:
+			// This is a non-blocking channel write to trigger processor restart
+			// Once the first error has been written to this channel it will asynchronously trigger a processor restart
+			// so we do not care about writing any subsequent errors, they are logged then ignored.
+			case firstRabbitErr <- rabbitErr:
 			default:
 			}
 		} else {
@@ -72,9 +74,10 @@ func (p *Processor) handleRabbitChannelErrors(rabbitChannelErrs <-chan *amqp.Err
 	}
 }
 
-func (p *Processor) aggregateRabbitErrors(rabbitErrChan <-chan *amqp.Error) {
+func (p *Processor) sendProcessorErrorOnRabbitError(firstRabbitErr <-chan *amqp.Error) {
+	// We only consume off this channel once to trigger the processor restart on the first error
 	select {
-	case err := <-rabbitErrChan:
+	case err := <-firstRabbitErr:
 		p.ErrChan <- Error{
 			Err:       errors.Wrap(err, "rabbit connection or channel error"),
 			Processor: p,
@@ -96,18 +99,18 @@ func (p *Processor) startPublishers(ctx context.Context) {
 	}
 
 	p.RabbitChannels = make([]RabbitChannel, 0)
-	aggregateErrs := make(chan *amqp.Error)
+	firstRabbitErr := make(chan *amqp.Error)
 
 	for i := 0; i < p.Config.PublishersPerProcessor; i++ {
 
 		// Open a rabbit channel for each publisher worker
-		channel, err := p.initRabbitChannel(aggregateErrs)
+		channel, err := p.initRabbitChannel(firstRabbitErr)
 		if err != nil {
 			return
 		}
 		go p.Publish(ctx, channel)
 	}
-	go p.aggregateRabbitErrors(aggregateErrs)
+	go p.sendProcessorErrorOnRabbitError(firstRabbitErr)
 }
 
 func (p *Processor) Publish(ctx context.Context, channel RabbitChannel) {
