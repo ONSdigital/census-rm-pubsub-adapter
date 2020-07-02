@@ -78,10 +78,7 @@ func (p *Processor) sendProcessorErrorOnRabbitError(firstRabbitErr <-chan *amqp.
 	// We only consume off this channel once to trigger the processor restart on the first error
 	select {
 	case err := <-firstRabbitErr:
-		p.ErrChan <- Error{
-			Err:       errors.Wrap(err, "rabbit connection or channel error"),
-			Processor: p,
-		}
+		p.ReportError(errors.Wrap(err, "rabbit connection or channel error"))
 	case <-p.Context.Done():
 		return
 	}
@@ -91,10 +88,7 @@ func (p *Processor) startPublishers(ctx context.Context) {
 	// Setup one rabbit connection
 	if err := p.initRabbitConnection(); err != nil {
 		p.Logger.Errorw("Error initialising rabbit connection", "error", err)
-		p.ErrChan <- Error{
-			Err:       err,
-			Processor: p,
-		}
+		p.ReportError(err)
 		return
 	}
 

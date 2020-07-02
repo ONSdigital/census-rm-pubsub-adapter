@@ -105,10 +105,7 @@ func (p *Processor) Consume() {
 	err := p.PubSubSubscription.Receive(p.Context, p.Process)
 	if err != nil {
 		p.Logger.Errorw("Error in consumer", "error", err)
-		p.ErrChan <- Error{
-			Err:       err,
-			Processor: p,
-		}
+		p.ReportError(err)
 	}
 }
 
@@ -181,14 +178,18 @@ func (p *Processor) Restart(ctx context.Context) {
 	p.Stop()
 	if err := p.Initialise(ctx); err != nil {
 		logger.Logger.Errorw("Failed to restart processor", "error", err, "processor", p.Name)
-		go p.QueueError(err)
+		p.ReportError(err)
 	}
 
 }
 
-func (p *Processor) QueueError(err error) {
-	p.ErrChan <- Error{
-		Err:       err,
-		Processor: p,
-	}
+func (p *Processor) ReportError(err error) {
+	// Writing to a channel is a blocking operation, it waits till there is a consumer ready.
+	// Do it in a go routine to ensure it gets written without blocking the caller.
+	go func() {
+		p.ErrChan <- Error{
+			Err:       err,
+			Processor: p,
+		}
+	}()
 }
