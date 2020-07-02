@@ -240,7 +240,7 @@ func TestRabbitReconnectOnChannelDeath(t *testing.T) {
 	assert.NoError(t, ready.Ready())
 
 	// Start the run loop
-	go RunLoop(timeout, cfg, nil, errChan, ready)
+	go RunLoop(timeout, cfg, nil, errChan)
 
 	// Take the first testProcessor
 	testProcessor := processors[0]
@@ -313,7 +313,7 @@ func TestRabbitReconnectOnBadConnection(t *testing.T) {
 	assert.NoError(t, ready.Ready())
 
 	// Start the run loop
-	go RunLoop(timeout, cfg, nil, errChan, ready)
+	go RunLoop(timeout, cfg, nil, errChan)
 
 	// Take the first processor
 	testProcessor := processors[0]
@@ -353,7 +353,7 @@ func TestProcessorGracefullyReinitializeRabbitChannels(t *testing.T) {
 	// Take the first processor, for example
 	testProcessor := processors[0]
 
-	// Grab one of it's rabbit channels and subscribe to it's close notifications
+	// Grab one of its rabbit channels and subscribe to its close notifications
 	channel, ok := getRabbitChannelFromProcessor(timeout, testProcessor)
 	if !ok {
 		assert.Fail(t, "Failed to get a rabbit channel from the processor within the timeout")
@@ -362,7 +362,7 @@ func TestProcessorGracefullyReinitializeRabbitChannels(t *testing.T) {
 	rabbitErrChan := make(chan *amqp.Error)
 	channel.NotifyClose(rabbitErrChan)
 
-	go RunLoop(timeout, cfg, nil, errChan, new(readiness.Readiness))
+	go RunLoop(timeout, cfg, nil, errChan)
 
 	// Simulate an error
 	errChan <- processor.Error{

@@ -46,7 +46,7 @@ func main() {
 	}
 
 	// Wait for processors to start properly
-	if err := waitForStartup(ctx, errChan); err != nil {
+	if err := waitForStartup(ctx, appConfig, errChan); err != nil {
 		logger.Logger.Info("Shutting down due to start up error")
 		return
 	}
@@ -59,10 +59,10 @@ func main() {
 	}
 
 	// Block until we receive OS shutdown signal or error
-	RunLoop(ctx, appConfig, signals, errChan, ready)
+	RunLoop(ctx, appConfig, signals, errChan)
 }
 
-func RunLoop(ctx context.Context, cfg *config.Configuration, signals chan os.Signal, errChan chan processor.Error, readiness *readiness.Readiness) {
+func RunLoop(ctx context.Context, cfg *config.Configuration, signals chan os.Signal, errChan chan processor.Error) {
 	for {
 		select {
 		case sig := <-signals:
@@ -74,8 +74,8 @@ func RunLoop(ctx context.Context, cfg *config.Configuration, signals chan os.Sig
 			processorErr.Restart(ctx)
 
 			// Wait for successful start up
-			if err := waitForStartup(ctx, errChan); err != nil {
-				// Requeue the error if restart was no successful so that it is retried
+			if err := waitForStartup(ctx, cfg, errChan); err != nil {
+				// Requeue the error if restart was not successful so that it is retried
 				go processorErr.QueueError(err)
 			} else {
 				logger.Logger.Infow("Successfully restarted processor", "processor", processorErr.Name)
@@ -134,8 +134,8 @@ func StartProcessors(ctx context.Context, cfg *config.Configuration, errChan cha
 	return processors, nil
 }
 
-func waitForStartup(ctx context.Context, errChan chan processor.Error) error {
-	startupTimer, cancel := context.WithTimeout(ctx, 5*time.Second)
+func waitForStartup(ctx context.Context, cfg *config.Configuration, errChan chan processor.Error) error {
+	startupTimer, cancel := context.WithTimeout(ctx, time.Duration(cfg.ProcessorStartUpTimeSeconds)*time.Second)
 	defer cancel()
 	select {
 	case processorError := <-errChan:

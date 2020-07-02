@@ -12,6 +12,7 @@ type Configuration struct {
 	QuarantineMessageUrl        string `envconfig:"QUARANTINE_MESSAGE_URL"  required:"true"`
 	PublishersPerProcessor      int    `envconfig:"PUBLISHERS_PER_PROCESSOR" default:"20"`
 	ProcessorRestartWaitSeconds int    `envconfig:"PROCESSOR_RESTART_WAIT_SECONDS" default:"5"`
+	ProcessorStartUpTimeSeconds int    `envconfig:"PROCESSOR_START_UP_TIME_SECONDS default:"5"`
 
 	// Rabbit
 	RabbitHost                       string `envconfig:"RABBIT_HOST" required:"true"`
@@ -51,6 +52,7 @@ var cfg *Configuration
 var TestConfig = &Configuration{
 	PublishersPerProcessor:           1,
 	ProcessorRestartWaitSeconds:      1,
+	ProcessorStartUpTimeSeconds:      1,
 	ReadinessFilePath:                "/tmp/pubsub-adapter-ready",
 	RabbitConnectionString:           "amqp://guest:guest@localhost:7672/",
 	ReceiptRoutingKey:                "goTestReceiptQueue",
