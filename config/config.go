@@ -12,7 +12,7 @@ type Configuration struct {
 	QuarantineMessageUrl        string `envconfig:"QUARANTINE_MESSAGE_URL"  required:"true"`
 	PublishersPerProcessor      int    `envconfig:"PUBLISHERS_PER_PROCESSOR" default:"20"`
 	ProcessorRestartWaitSeconds int    `envconfig:"PROCESSOR_RESTART_WAIT_SECONDS" default:"5"`
-	ProcessorStartUpTimeSeconds int    `envconfig:"PROCESSOR_START_UP_TIME_SECONDS default:"5"`
+	ProcessorStartUpTimeSeconds int    `envconfig:"PROCESSOR_START_UP_TIME_SECONDS" default:"5"`
 
 	// Rabbit
 	RabbitHost                       string `envconfig:"RABBIT_HOST" required:"true"`
