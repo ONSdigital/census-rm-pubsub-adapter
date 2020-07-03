@@ -73,14 +73,6 @@ func RunLoop(ctx context.Context, cfg *config.Configuration, signals chan os.Sig
 
 			processorErr.Restart(ctx)
 
-			// Wait for successful start up
-			if err := waitForStartup(ctx, cfg, errChan); err != nil {
-				// Requeue the error if restart was not successful so that it is retried
-				processorErr.ReportError(err)
-			} else {
-				logger.Logger.Infow("Successfully restarted processor", "processor", processorErr.Name)
-			}
-
 			// Limit the rate of restarts
 			time.Sleep(time.Duration(cfg.ProcessorRestartWaitSeconds) * time.Second)
 		}
