@@ -8,7 +8,7 @@ import (
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 )
 
-func NewOfflineReceiptProcessor(ctx context.Context, appConfig *config.Configuration, errChan chan error) (*Processor, error) {
+func NewOfflineReceiptProcessor(ctx context.Context, appConfig *config.Configuration, errChan chan Error) (*Processor, error) {
 	return NewProcessor(ctx, appConfig, appConfig.OfflineReceiptProject, appConfig.OfflineReceiptSubscription, appConfig.ReceiptRoutingKey, convertOfflineReceiptToRmMessage, unmarshalOfflineReceipt, errChan)
 }
 

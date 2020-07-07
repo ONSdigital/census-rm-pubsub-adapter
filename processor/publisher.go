@@ -29,7 +29,7 @@ func (p *Processor) initRabbitConnection() error {
 	return nil
 }
 
-func (p *Processor) initRabbitChannel(cancelFunc context.CancelFunc) (RabbitChannel, error) {
+func (p *Processor) initRabbitChannel(firstRabbitErr chan *amqp.Error) (RabbitChannel, error) {
 	var err error
 	var channel *amqp.Channel
 
@@ -46,63 +46,65 @@ func (p *Processor) initRabbitChannel(cancelFunc context.CancelFunc) (RabbitChan
 
 	// Set up handler to attempt to reopen channel on channel close
 	// Listen for errors on the rabbit channel to handle both channel specific and connection wide exceptions
-	channelErrChan := make(chan *amqp.Error)
-	go func() {
-		channelErr := <-channelErrChan
-
-		// TODO handle reconnecting in graceful processor restart rather than a direct call to reinitialize here
-		p.Logger.Errorw("received rabbit channel error", "error", channelErr)
-		cancelFunc()
-	}()
-	channel.NotifyClose(channelErrChan)
+	rabbitChannelErrs := make(chan *amqp.Error)
+	go p.handleRabbitChannelErrors(rabbitChannelErrs, firstRabbitErr)
+	channel.NotifyClose(rabbitChannelErrs)
 	p.RabbitChannels = append(p.RabbitChannels, channel)
 
 	return channel, nil
 }
 
-func (p *Processor) startPublishers(ctx context.Context, publisherCancel context.CancelFunc) {
+func (p *Processor) handleRabbitChannelErrors(rabbitChannelErrs <-chan *amqp.Error, firstRabbitErr chan<- *amqp.Error) {
+	select {
+	case rabbitErr := <-rabbitChannelErrs:
+		if rabbitErr != nil {
+			p.Logger.Errorw("received rabbit channel error", "error", rabbitErr)
+			select {
+			// This is a non-blocking channel write to trigger processor restart
+			// Once the first error has been written to this channel it will asynchronously trigger a processor restart
+			// so we do not care about writing any subsequent errors, they are logged then ignored.
+			case firstRabbitErr <- rabbitErr:
+			default:
+			}
+		} else {
+			p.Logger.Debug("Rabbit channel shutting down")
+		}
+	case <-p.Context.Done():
+		return
+	}
+}
+
+func (p *Processor) sendProcessorErrorOnRabbitError(firstRabbitErr <-chan *amqp.Error) {
+	// We only consume off this channel once to trigger the processor restart on the first error
+	select {
+	case err := <-firstRabbitErr:
+		p.ReportError(errors.Wrap(err, "rabbit connection or channel error"))
+	case <-p.Context.Done():
+		return
+	}
+}
+
+func (p *Processor) startPublishers(ctx context.Context) {
 	// Setup one rabbit connection
 	if err := p.initRabbitConnection(); err != nil {
 		p.Logger.Errorw("Error initialising rabbit connection", "error", err)
-		publisherCancel()
+		p.ReportError(err)
 		return
 	}
 
 	p.RabbitChannels = make([]RabbitChannel, 0)
+	firstRabbitErr := make(chan *amqp.Error)
 
 	for i := 0; i < p.Config.PublishersPerProcessor; i++ {
 
 		// Open a rabbit channel for each publisher worker
-		channel, err := p.initRabbitChannel(publisherCancel)
+		channel, err := p.initRabbitChannel(firstRabbitErr)
 		if err != nil {
 			return
 		}
 		go p.Publish(ctx, channel)
 	}
-}
-
-func (p *Processor) ManagePublishers(ctx context.Context) {
-
-	publisherCtx, publisherCancel := context.WithCancel(context.Background())
-	p.startPublishers(ctx, publisherCancel)
-
-	for {
-		select {
-		case <-publisherCtx.Done():
-			// Use a publisher context to restart publishers on rabbit connection or channel errors
-			// TODO replace this with graceful processor restarting
-			publisherCtx, publisherCancel = context.WithCancel(context.Background())
-			p.Logger.Info("Restarting publishers")
-
-			// Tidy up the current connection and any open channels
-			p.CloseRabbit(true)
-
-			// Restart publishers
-			p.startPublishers(ctx, publisherCancel)
-		case <-ctx.Done():
-			return
-		}
-	}
+	go p.sendProcessorErrorOnRabbitError(firstRabbitErr)
 }
 
 func (p *Processor) Publish(ctx context.Context, channel RabbitChannel) {
@@ -158,6 +160,10 @@ func (p *Processor) publishEventToRabbit(message *models.RmMessage, routingKey s
 
 	p.Logger.Debugw("Published message", "routingKey", routingKey, "transactionId", message.Event.TransactionID)
 	return nil
+}
+
+func (p *Processor) StopPublishers() {
+
 }
 
 func (p *Processor) CloseRabbit(errOk bool) {

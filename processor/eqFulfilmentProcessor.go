@@ -8,7 +8,7 @@ import (
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 )
 
-func NewEqFulfilmentProcessor(ctx context.Context, appConfig *config.Configuration, errChan chan error) (*Processor, error) {
+func NewEqFulfilmentProcessor(ctx context.Context, appConfig *config.Configuration, errChan chan Error) (*Processor, error) {
 	return NewProcessor(ctx, appConfig, appConfig.EqFulfilmentProject, appConfig.EqFulfilmentSubscription, appConfig.FulfilmentRequestRoutingKey, convertEqFulfilment, unmarshalEqFulfilment, errChan)
 }
 

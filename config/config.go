@@ -7,10 +7,12 @@ import (
 )
 
 type Configuration struct {
-	ReadinessFilePath      string `envconfig:"READINESS_FILE_PATH" default:"/tmp/pubsub-adapter-ready"`
-	LogLevel               string `envconfig:"LOG_LEVEL" default:"ERROR"`
-	QuarantineMessageUrl   string `envconfig:"QUARANTINE_MESSAGE_URL"  required:"true"`
-	PublishersPerProcessor int    `envconfig:"PUBLISHERS_PER_PROCESSOR" default:"20"`
+	ReadinessFilePath           string `envconfig:"READINESS_FILE_PATH" default:"/tmp/pubsub-adapter-ready"`
+	LogLevel                    string `envconfig:"LOG_LEVEL" default:"ERROR"`
+	QuarantineMessageUrl        string `envconfig:"QUARANTINE_MESSAGE_URL"  required:"true"`
+	PublishersPerProcessor      int    `envconfig:"PUBLISHERS_PER_PROCESSOR" default:"20"`
+	ProcessorRestartWaitSeconds int    `envconfig:"PROCESSOR_RESTART_WAIT_SECONDS" default:"5"`
+	ProcessorStartUpTimeSeconds int    `envconfig:"PROCESSOR_START_UP_TIME_SECONDS" default:"5"`
 
 	// Rabbit
 	RabbitHost                       string `envconfig:"RABBIT_HOST" required:"true"`
@@ -49,6 +51,9 @@ type Configuration struct {
 var cfg *Configuration
 var TestConfig = &Configuration{
 	PublishersPerProcessor:           1,
+	ProcessorRestartWaitSeconds:      1,
+	ProcessorStartUpTimeSeconds:      1,
+	ReadinessFilePath:                "/tmp/pubsub-adapter-ready",
 	RabbitConnectionString:           "amqp://guest:guest@localhost:7672/",
 	ReceiptRoutingKey:                "goTestReceiptQueue",
 	UndeliveredRoutingKey:            "goTestUndeliveredQueue",

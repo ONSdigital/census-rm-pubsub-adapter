@@ -8,7 +8,7 @@ import (
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 )
 
-func NewFulfilmentConfirmedProcessor(ctx context.Context, appConfig *config.Configuration, errChan chan error) (*Processor, error) {
+func NewFulfilmentConfirmedProcessor(ctx context.Context, appConfig *config.Configuration, errChan chan Error) (*Processor, error) {
 	return NewProcessor(ctx, appConfig, appConfig.FulfilmentConfirmedProject, appConfig.FulfilmentConfirmedSubscription, appConfig.FulfilmentConfirmationRoutingKey, convertFulfilmentConfirmedToRmMessage, unmarshalFulfilmentConfirmed, errChan)
 }
 

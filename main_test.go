@@ -12,6 +12,7 @@ import (
 	"github.com/ONSdigital/census-rm-pubsub-adapter/config"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/models"
 	"github.com/ONSdigital/census-rm-pubsub-adapter/processor"
+	"github.com/ONSdigital/census-rm-pubsub-adapter/readiness"
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
@@ -116,7 +117,7 @@ func testMessageProcessing(messageToSend string, expectedRabbitMessage string, t
 	return func(t *testing.T) {
 		timeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		if _, err := StartProcessors(timeout, cfg, make(chan error)); err != nil {
+		if _, err := StartProcessors(timeout, cfg, make(chan processor.Error)); err != nil {
 			assert.NoError(t, err)
 			return
 		}
@@ -173,7 +174,7 @@ func testMessageQuarantining(messageToSend string, testDescription string, t *te
 
 	cfg.QuarantineMessageUrl = srv.URL
 
-	if _, err := StartProcessors(timeout, cfg, make(chan error)); err != nil {
+	if _, err := StartProcessors(timeout, cfg, make(chan processor.Error)); err != nil {
 		assert.NoError(t, err)
 		return
 	}
@@ -213,7 +214,7 @@ func testMessageQuarantining(messageToSend string, testDescription string, t *te
 func TestStartProcessors(t *testing.T) {
 	timeout, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	processors, err := StartProcessors(timeout, cfg, make(chan error))
+	processors, err := StartProcessors(timeout, cfg, make(chan processor.Error))
 	if err != nil {
 		assert.NoError(t, err)
 		return
@@ -226,29 +227,32 @@ func TestRabbitReconnectOnChannelDeath(t *testing.T) {
 	timeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Start up the processors normally
-	processors, err := StartProcessors(timeout, cfg, make(chan error))
+	errChan := make(chan processor.Error)
+
+	// Initialise up the processors normally
+	processors, err := StartProcessors(timeout, cfg, errChan)
 	if err != nil {
 		assert.NoError(t, err)
 		return
 	}
 
+	ready := readiness.New(timeout, cfg.ReadinessFilePath)
+	assert.NoError(t, ready.Ready())
+
+	// Start the run loop
+	go RunLoop(timeout, cfg, nil, errChan)
+
 	// Take the first testProcessor
 	testProcessor := processors[0]
 
 	// Pick one of the processors rabbit channels
-	var channel processor.RabbitChannel
-	for channel == nil {
-		select {
-		case <-timeout.Done():
-			t.Error()
-			return
-		default:
-			if len(testProcessor.RabbitChannels) > 0 {
-				channel = testProcessor.RabbitChannels[0]
-			}
-		}
+	channel, ok := getRabbitChannelFromProcessor(timeout, testProcessor)
+	if !ok {
+		assert.Fail(t, "Failed to get a rabbit channel from the processor within the timeout")
+		return
 	}
+
+	// Subscribe another test channel to the close notifications
 	channelErrChan := make(chan *amqp.Error)
 	channel.NotifyClose(channelErrChan)
 
@@ -270,7 +274,8 @@ func TestRabbitReconnectOnChannelDeath(t *testing.T) {
 	// Wait for the unpublishable message to kill the channel with a timeout
 	select {
 	case <-timeout.Done():
-		t.Error("Timed out waiting for induced rabbit channel closure")
+		assert.Fail(t, "Timed out waiting for induced rabbit channel closure")
+		return
 	case <-channelErrChan:
 	}
 
@@ -280,7 +285,7 @@ func TestRabbitReconnectOnChannelDeath(t *testing.T) {
 
 	select {
 	case <-timeout.Done():
-		t.Error("Failed to publish message with processors channel within the timeout")
+		assert.Fail(t, "Failed to publish message with processors channel within the timeout")
 		return
 	case <-success:
 		return
@@ -295,12 +300,21 @@ func TestRabbitReconnectOnBadConnection(t *testing.T) {
 	brokenCfg := *cfg
 	brokenCfg.RabbitConnectionString = "bad-connection-string"
 
-	// Start up the processors normally
-	processors, err := StartProcessors(timeout, &brokenCfg, make(chan error))
+	errChan := make(chan processor.Error)
+
+	// Initialise up the processors normally
+	processors, err := StartProcessors(timeout, &brokenCfg, errChan)
 	if err != nil {
 		assert.NoError(t, err)
 		return
 	}
+
+	ready := readiness.New(timeout, cfg.ReadinessFilePath)
+	assert.NoError(t, ready.Ready())
+
+	// Start the run loop
+	go RunLoop(timeout, cfg, nil, errChan)
+
 	// Take the first processor
 	testProcessor := processors[0]
 
@@ -316,11 +330,82 @@ func TestRabbitReconnectOnBadConnection(t *testing.T) {
 
 	select {
 	case <-timeout.Done():
-		t.Error("Failed to publish message with processors channel within the timeout")
+		assert.Fail(t, "Failed to publish message with processors channel within the timeout")
 		return
 	case <-success:
 		return
 	}
+}
+
+func TestProcessorGracefullyReinitializeRabbitChannels(t *testing.T) {
+	timeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	errChan := make(chan processor.Error)
+
+	// Initialise up the processors normally
+	processors, err := StartProcessors(timeout, cfg, errChan)
+	if err != nil {
+		assert.NoError(t, err)
+		return
+	}
+
+	// Take the first processor, for example
+	testProcessor := processors[0]
+
+	// Grab one of its rabbit channels and subscribe to its close notifications
+	channel, ok := getRabbitChannelFromProcessor(timeout, testProcessor)
+	if !ok {
+		assert.Fail(t, "Failed to get a rabbit channel from the processor within the timeout")
+		return
+	}
+	rabbitErrChan := make(chan *amqp.Error)
+	channel.NotifyClose(rabbitErrChan)
+
+	go RunLoop(timeout, cfg, nil, errChan)
+
+	// Simulate an error
+	errChan <- processor.Error{
+		Err:       errors.New("DOOOOOOOOOOM"),
+		Processor: testProcessor,
+	}
+
+	// Check the channel is gracefully shut down
+	select {
+	case <-timeout.Done():
+		assert.Fail(t, "Timed out waiting for rabbit channel to be closed")
+	case rabbitErr := <-rabbitErrChan:
+		assert.Nil(t, rabbitErr, "Rabbit channel error should be nil indicating graceful shutdown")
+	}
+
+	// Ensure the processor is restarted and can publish again
+	// Try to successfully publish a message using the processors channel within the timeout
+	success := make(chan bool)
+	go attemptPublishOnProcessorsChannel(timeout, testProcessor, success)
+
+	select {
+	case <-timeout.Done():
+		assert.Fail(t, "Failed to publish message with processors channel within the timeout")
+		return
+	case <-success:
+		return
+	}
+
+}
+
+func getRabbitChannelFromProcessor(timeout context.Context, testProcessor *processor.Processor) (processor.RabbitChannel, bool) {
+	var channel processor.RabbitChannel
+	for channel == nil {
+		select {
+		case <-timeout.Done():
+			return nil, false
+		default:
+			if len(testProcessor.RabbitChannels) > 0 {
+				channel = testProcessor.RabbitChannels[0]
+			}
+		}
+	}
+	return channel, true
 }
 
 func publishMessageToPubSub(ctx context.Context, msg string, topic string, project string) (id string, err error) {
