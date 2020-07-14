@@ -114,7 +114,7 @@ func (p *Processor) Process(_ context.Context, msg *pubsub.Message) {
 	messageReceived, err := p.unmarshallMessage(msg.Data)
 	if err != nil {
 		ctxLogger.Errorw("Error unmarshalling message, quarantining", "error", err, "data", string(msg.Data))
-		if err := p.quarantineMessage(msg); err != nil {
+		if err := p.quarantineMessage(msg, err); err != nil {
 			ctxLogger.Errorw("Error quarantining bad message, nacking", "error", err, "data", string(msg.Data))
 			msg.Nack()
 			return
@@ -134,7 +134,7 @@ func (p *Processor) Process(_ context.Context, msg *pubsub.Message) {
 	p.OutboundMsgChan <- &models.OutboundMessage{SourceMessage: msg, EventMessage: rmMessageToSend}
 }
 
-func (p *Processor) quarantineMessage(message *pubsub.Message) error {
+func (p *Processor) quarantineMessage(message *pubsub.Message, rootErr error) error {
 	headers := map[string]string{
 		"pubSubId": message.ID,
 	}
@@ -144,14 +144,15 @@ func (p *Processor) quarantineMessage(message *pubsub.Message) error {
 	}
 
 	msgToQuarantine := models.MessageToQuarantine{
-		MessageHash:    fmt.Sprintf("%x", sha256.Sum256(message.Data)),
-		MessagePayload: message.Data,
-		Service:        "Pubsub Adapter",
-		Queue:          p.PubSubSubscription.ID(),
-		ExceptionClass: "Error unmarshalling message",
-		RoutingKey:     "none",
-		ContentType:    "application/json",
-		Headers:        headers,
+		MessageHash:      fmt.Sprintf("%x", sha256.Sum256(message.Data)),
+		MessagePayload:   message.Data,
+		Service:          "Pubsub Adapter",
+		Queue:            p.PubSubSubscription.ID(),
+		ExceptionClass:   "Error unmarshalling message",
+		ExceptionMessage: rootErr.Error(),
+		RoutingKey:       "none",
+		ContentType:      "application/json",
+		Headers:          headers,
 	}
 
 	jsonValue, err := json.Marshal(msgToQuarantine)
