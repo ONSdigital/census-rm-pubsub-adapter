@@ -54,7 +54,7 @@ var TestConfig = &Configuration{
 	ProcessorRestartWaitSeconds:      1,
 	ProcessorStartUpTimeSeconds:      1,
 	ReadinessFilePath:                "/tmp/pubsub-adapter-ready",
-	RabbitConnectionString:           "amqp://guest:guest@localhost:7672/",
+	RabbitConnectionString:           "amqp://rmquser:rmqp455w0rd@localhost:7672/",
 	ReceiptRoutingKey:                "goTestReceiptQueue",
 	UndeliveredRoutingKey:            "goTestUndeliveredQueue",
 	FulfilmentRequestRoutingKey:      "goTestFulfilmentRequestQueue",

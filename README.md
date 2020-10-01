@@ -28,8 +28,8 @@ QUARANTINE_MESSAGE_URL
 LOG_LEVEL=DEBUG
 RABBIT_HOST=localhost
 RABBIT_PORT=7672
-RABBIT_USERNAME=guest
-RABBIT_PASSWORD=guest
+RABBIT_USERNAME=rmquser
+RABBIT_PASSWORD=rmqp455w0rd
 EQ_RECEIPT_PROJECT=project
 PUBSUB_EMULATOR_HOST=localhost:8539
 EQ_RECEIPT_PROJECT=project
@@ -51,8 +51,8 @@ NB: `RABBIT_EXCHANGE` is intentionally an empty string to use the rabbit default
 LOG_LEVEL=INFO
 RABBIT_HOST=localhost
 RABBIT_PORT=6672
-RABBIT_USERNAME=guest
-RABBIT_PASSWORD=guest
+RABBIT_USERNAME=rmquser
+RABBIT_PASSWORD=rmqp455w0rd
 EQ_RECEIPT_PROJECT=project
 PUBSUB_EMULATOR_HOST=localhost:8538
 EQ_RECEIPT_PROJECT=project
@@ -96,4 +96,4 @@ You can send a test message onto the pubsub emulator with the tools script
 ```sh
 PUBSUB_EMULATOR_HOST=localhost:8539 go run tools/publish_message.go
 ```
-You should see the pubsub adapter log that it has processed the message and see the rabbit messages it produced in the rabbit management UI at http://localhost:17672 (login: guest, guest).
+You should see the pubsub adapter log that it has processed the message and see the rabbit messages it produced in the rabbit management UI at http://localhost:17672 (login: rmquser, rmqp455w0rd).

@@ -38,6 +38,6 @@ curl -X PUT http://localhost:8539/v1/projects/qm-undelivered-project/subscriptio
 curl -X PUT http://localhost:8539/v1/projects/fulfilment-confirmed-project/subscriptions/fulfilment-confirmed-subscription -H 'Content-Type: application/json' -d '{"topic": "projects/fulfilment-confirmed-project/topics/fulfilment-confirmed-topic"}'
 curl -X PUT http://localhost:8539/v1/projects/eq-fulfilment-project/subscriptions/eq-fulfilment-subscription -H 'Content-Type: application/json' -d '{"topic": "projects/eq-fulfilment-project/topics/eq-fulfilment-topic"}'
 
-wait_for_curl_success "http://guest:guest@localhost:17672/api/aliveness-test/%2F" "GET" "rabbitmq"
+wait_for_curl_success "http://rmquser:rmqp455w0rd@localhost:17672/api/aliveness-test/%2F" "GET" "rabbitmq"
 
 echo "Containers running and alive"
