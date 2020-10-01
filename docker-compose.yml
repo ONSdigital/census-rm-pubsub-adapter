@@ -11,7 +11,7 @@ services:
       - "17692:15692"
     environment:
       - RABBITMQ_DEFAULT_USER=rmquser
-      - RABBITMQ_DEFAULT_PASS=rmqp455w0rd
+      - RABBITMQ_DEFAULT_PASS=qpassword
       - RABBITMQ_CONFIG_FILE=/etc/rabbitmq/rabbitmq.conf
     volumes:
       - ./rabbitmq/definitions.json:/opt/definitions.json
@@ -29,9 +29,9 @@ services:
     image: eu.gcr.io/census-rm-ci/rm/census-rm-pubsub-adapter
     environment:
       - PUBSUB_EMULATOR_HOST=pubsub-emulator-pubsub-adapter-dev:8539
-      - RABBIT_CONNECTION=amqp://rmquser:rmqp455w0rd@rabbitmq-pubsub-adapter-dev:5672/
+      - RABBIT_CONNECTION=amqp://rmquser:qpassword@rabbitmq-pubsub-adapter-dev:5672/
       - RABBIT_USERNAME=rmquser
-      - RABBIT_PASSWORD=rmqp455w0rd
+      - RABBIT_PASSWORD=qpassword
       - RABBIT_HOST=rabbitmq-pubsub-adapter-dev
       - RABBIT_PORT=5672
       - RABBIT_VHOST=/
