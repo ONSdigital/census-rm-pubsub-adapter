@@ -93,7 +93,7 @@ spec:
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: "/gcp-credentials/service-account-key.json"
             - name: RABBIT_HOST
-              value: "rabbitmq"
+              value: "rm-rabbitmq"
             - name: RABBIT_PORT
               value: "5672"
             - name: RABBIT_USERNAME
