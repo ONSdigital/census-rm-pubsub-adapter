@@ -2,16 +2,18 @@ version: "3.4"
 services:
   rabbitmq:
     container_name: rabbitmq-pubsub-adapter-dev
-    image: rabbitmq:3.8.2-management
+    image: rabbitmq:3.8-management
     ports:
       - "6369:4369"
       - "46672:25672"
       - "7671-7672:5671-5672"
       - "17671-17672:15671-15672"
       - "17692:15692"
+    environment:
+      - RABBITMQ_CONFIG_FILE=/etc/rabbitmq/rabbitmq.conf
     volumes:
-      - ./rabbitmq/rabbitmq.config:/etc/rabbitmq/rabbitmq.config:ro
-      - ./rabbitmq/definitions.json:/opt/definitions.json:ro
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+      - ./rabbitmq/definitions.json:/opt/definitions.json
 
   pubsub-emulator:
     container_name: pubsub-emulator-pubsub-adapter-dev
