@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -28,9 +29,9 @@ func main() {
 	}
 	logger.Logger.Infow("Launching PubSub Adapter")
 
-	// Trap SIGINT to trigger graceful shutdown
+	// Trap SIGINT and SIGTERM to trigger graceful shutdown
 	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Interrupt)
+	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 
 	// Channel for goroutines to notify main of errors
 	errChan := make(chan processor.Error)
