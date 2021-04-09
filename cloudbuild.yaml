@@ -6,3 +6,6 @@ steps:
   args:
   - 'run'
   - '-version'
+  - '--volume $(pwd)/cloud-build:/workspace'
+  - '--workdir /workspace'
+  - 'init'
