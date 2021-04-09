@@ -2,8 +2,7 @@
 # $ gcloud builds submit
 
 steps:
-- name: 'rm/cloud-build-demo/terraform'
+- name: 'docker.io/hashicorp/terraform'
   args:
   - 'run'
-  - 'hashicorp/terraform'
   - 'version'
