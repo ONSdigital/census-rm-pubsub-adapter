@@ -4,6 +4,9 @@
 steps:
 - name: 'docker.io/hashicorp/terraform'
   args: [ 'init','cloud-build']
+- name: 'docker.io/hashicorp/terraform'
+  args: ['plan']
+  
 
 
 # terraform init \
