@@ -7,7 +7,7 @@ steps:
 - name: 'bash'
   args: ['pwd', '&&', 'ls -la']
 - name: 'docker.io/hashicorp/terraform'
-  args: ['plan']
+  args: ['plan', 'cloud-build']
   
 
 
