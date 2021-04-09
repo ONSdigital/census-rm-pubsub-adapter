@@ -5,4 +5,4 @@ steps:
 - name: 'docker.io/hashicorp/terraform'
   args:
   - 'run'
-  - 'version'
+  - '-version'
