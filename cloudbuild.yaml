@@ -3,4 +3,9 @@
 
 steps:
 - name: 'docker.io/hashicorp/terraform'
-  args: ['run', '--volume $(pwd)/cloud-build:/workspace', '--workdir /workspace', 'init']
+  args: 
+  - 'run', 
+  - 'init',
+  - '--volume $(pwd)/cloud-build:/workspace', 
+  - '--workdir /workspace', 'init']
+   
