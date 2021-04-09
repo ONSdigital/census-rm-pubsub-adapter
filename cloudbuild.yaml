@@ -1,5 +1,5 @@
-# In this directory, run the following command to build this builder.
-# $ gcloud builds submit
+# We are running the terraform container which should pick up the terraform
+# in the cloud-build folder and init, plan and apply it
 
 steps:
 - name: 'docker.io/hashicorp/terraform'
