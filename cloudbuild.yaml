@@ -7,5 +7,4 @@ steps:
   - 'run', 
   - 'init',
   - '--volume $(pwd)/cloud-build:/workspace', 
-  - '--workdir /workspace', 'init'
-   
+  - '--workdir /workspace'
