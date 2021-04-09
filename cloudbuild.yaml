@@ -7,7 +7,7 @@ steps:
 - name: 'docker.io/hashicorp/terraform'
   args: ['plan', 'cloud-build']
 - name: 'docker.io/hashicorp/terraform'
-  args: ['apply', 'cloud-build']  
+  args: ['apply', '-auto-approve', 'cloud-build']  
 
 
 # terraform init \
