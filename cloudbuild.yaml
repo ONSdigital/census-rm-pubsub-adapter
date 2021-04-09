@@ -3,4 +3,9 @@
 
 steps:
 - name: 'docker.io/hashicorp/terraform'
-  args: [ 'init', '--volume $(pwd)/cloud-build:/workspace', '--workdir /workspace']
+  args: [ 'init cloud-build', '--volume $(pwd)/cloud-build:/workspace', '--workdir /workspace']
+
+
+# terraform init \
+#     -backend-config="bucket=$GCP_BUCKET" \
+#     -backend-config="prefix=rm"
