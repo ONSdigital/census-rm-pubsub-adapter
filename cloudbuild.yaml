@@ -5,7 +5,10 @@ steps:
 - name: 'docker.io/hashicorp/terraform'
   args: [ 'init','cloud-build']
 - name: 'bash'
-  args: ['pwd && ls -la']
+  args:
+  - |-
+    pwd
+    ls -la
 - name: 'docker.io/hashicorp/terraform'
   args: ['plan']
   
