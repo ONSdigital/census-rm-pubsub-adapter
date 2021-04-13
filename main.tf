@@ -4,7 +4,7 @@ provider google {
 }
 
 resource google_storage_bucket cloud-build-bucket {
-    name                        = "my-cloud-build-bucket"
+    name                        = "my-cloud-build-trigger-bucket"
     storage_class               = "REGIONAL"
     location                    = "europe-west2"
     uniform_bucket_level_access = true
