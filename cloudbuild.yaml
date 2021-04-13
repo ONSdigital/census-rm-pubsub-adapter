@@ -3,13 +3,8 @@
 
 steps:
 - name: 'docker.io/hashicorp/terraform'
-  args: [ 'init', 'cloud-build']
+  args: [ 'init' ]
 - name: 'docker.io/hashicorp/terraform'
-  args: ['plan', 'cloud-build']
+  args: [ 'plan' ]
 - name: 'docker.io/hashicorp/terraform'
-  args: ['apply', '-auto-approve', 'cloud-build']  
-
-
-# terraform init \
-#     -backend-config="bucket=$GCP_BUCKET" \
-#     -backend-config="prefix=rm"
+  args: [ 'apply', '-auto-approve' ]
