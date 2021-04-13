@@ -10,5 +10,6 @@ resource random_id postfix {
 resource google_storage_bucket cloud-build-bucket-no1 {
     name                        = "my-cloud-build-bucket-${random_id.postfix.hex}"
     storage_class               = "REGIONAL"
+    location                    = "europe-west2"
     uniform_bucket_level_access = true
 }
