@@ -5,6 +5,7 @@ provider google {
 
 resource google_storage_bucket cloud-build-bucket-no1 {
     name                        = "my-cloud-build-bucket-no1"
+    project                     = "census-rm-apolloakora04"
     storage_class               = "REGIONAL"
     location                    = "europe-west2"
     uniform_bucket_level_access = true
@@ -13,6 +14,7 @@ resource google_storage_bucket cloud-build-bucket-no1 {
 resource google_compute_instance cloud-build-vm {
     name         = "my-cloud-build-vm"
     machine_type = "f1-micro"
+    project      = "census-rm-apolloakora04"
     zone         = "europe-west2-a"
 
     boot_disk {
