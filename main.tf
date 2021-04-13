@@ -3,8 +3,12 @@ provider google {
     region  = "europe-west2"
 }
 
+resource random_id postfix {
+    byte_length = 4
+}
+
 resource google_storage_bucket cloud-build-bucket-no1 {
-    name                        = "my-cloud-build-bucket-no1"
+    name                        = "my-cloud-build-bucket-${random_id.postfix.hex}"
     project                     = "census-rm-apolloakora04"
     storage_class               = "REGIONAL"
     location                    = "europe-west2"
@@ -12,10 +16,10 @@ resource google_storage_bucket cloud-build-bucket-no1 {
 }
 
 resource google_compute_instance cloud-build-vm {
-    name         = "my-cloud-build-vm"
+    name         = "my-cloud-build-vm-${random_id.postfix.hex}"
     machine_type = "f1-micro"
     project      = "census-rm-apolloakora04"
-    zone         = "europe-west2-a"
+###    zone         = "europe-west2-a"
 
     boot_disk {
         initialize_params {
