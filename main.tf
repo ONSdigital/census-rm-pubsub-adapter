@@ -1,6 +1,7 @@
 provider google {
     project = "census-rm-apolloakora04"
     region  = "europe-west2"
+    zone    = "europe-west2-b"
 }
 
 resource random_id postfix {
@@ -19,7 +20,6 @@ resource google_compute_instance cloud-build-vm {
     name         = "my-cloud-build-vm-${random_id.postfix.hex}"
     machine_type = "f1-micro"
     project      = "census-rm-apolloakora04"
-###    zone         = "europe-west2-a"
 
     boot_disk {
         initialize_params {
