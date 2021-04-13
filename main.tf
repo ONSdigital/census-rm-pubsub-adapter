@@ -20,14 +20,14 @@ resource google_compute_instance cloud-build-vm {
         }
     }
 
-    network_interface {
-        network = google_compute_network.cloud-build-net.self_link
-        access_config {
-        }
-    }
+#    network_interface {
+#        network = google_compute_network.cloud-build-net.self_link
+#        access_config {
+#        }
+#    }
 }
 
-resource google_compute_network cloud-builid-net {
-    name                    = "my-cloud-build-net"
-    auto_create_subnetworks = "true"
-}
+#resource google_compute_network cloud-builid-net {
+#    name                    = "my-cloud-build-net"
+#    auto_create_subnetworks = "true"
+#}
