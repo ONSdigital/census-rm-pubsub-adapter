@@ -3,8 +3,8 @@ provider google {
     region  = "europe-west2"
 }
 
-resource google_storage_bucket cloud-build-bucket {
-    name                        = "my-cloud-build-trigger-bucket"
+resource google_storage_bucket cloud-build-bucket-no1 {
+    name                        = "my-cloud-build-bucket-no1"
     storage_class               = "REGIONAL"
     location                    = "europe-west2"
     uniform_bucket_level_access = true
@@ -13,6 +13,7 @@ resource google_storage_bucket cloud-build-bucket {
 resource google_compute_instance cloud-build-vm {
     name         = "my-cloud-build-vm"
     machine_type = "f1-micro"
+    zone         = "europe-west2-a"
 
     boot_disk {
         initialize_params {
