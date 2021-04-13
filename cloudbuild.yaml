@@ -8,5 +8,3 @@ steps:
   args: [ 'plan' ]
 - name: 'docker.io/hashicorp/terraform'
   args: [ 'apply', '-auto-approve' ]
-- name: 'docker.io/hashicorp/terraform'
-  args: [ 'destroy', '-auto-approve' ]
